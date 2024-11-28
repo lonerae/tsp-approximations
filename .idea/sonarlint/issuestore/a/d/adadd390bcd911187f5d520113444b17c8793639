@@ -1,0 +1,21 @@
+
+
+java:S1319-"pThe return type of this method should be an interface such as "List" rather than the implementation "ArrayList".(ÊÖÁ8åï¥µ²2
+
+java:S13196"pThe return type of this method should be an interface such as "List" rather than the implementation "ArrayList".(°Øµ¹8Öñ¦µ²2
+W
+java:S1118	":Add a private constructor to hide the implicit public one.(›ã¨ˆ8ÃÂ¥µ²2
+L	java:S106"+Replace this use of System.out by a logger.(ú‘·øÿÿÿÿ8ÄÂ¥µ²2
+L	java:S106"+Replace this use of System.out by a logger.(ú‘·øÿÿÿÿ8ÅÂ¥µ²2
+L	java:S106"+Replace this use of System.out by a logger.(š„íøÿÿÿÿ8ÅÂ¥µ²2
+G	java:S106"+Replace this use of System.out by a logger.(Êá£”8ÆÂ¥µ²2
+G	java:S106"+Replace this use of System.out by a logger.(Êá£”8ÆÂ¥µ²2
+G	java:S106"+Replace this use of System.out by a logger.(ù’˜8ÆÂ¥µ²2
+F	java:S106"+Replace this use of System.out by a logger.(¨íŸo8ÆÂ¥µ²2
+F	java:S106 "+Replace this use of System.out by a logger.(¨íŸo8ÇÂ¥µ²2
+L	java:S106!"+Replace this use of System.out by a logger.(¼œÁ¼şÿÿÿÿ8ÇÂ¥µ²2
+G	java:S106%"+Replace this use of System.out by a logger.(Ä¤€8ÇÂ¥µ²2
+G	java:S106("+Replace this use of System.out by a logger.(Ä¤€8ÈÂ¥µ²2
+G	java:S106)"+Replace this use of System.out by a logger.(Á…ê‘8ÈÂ¥µ²2
+M
+java:S1128"+Remove this unused import 'java.util.List'.(Õë±Äøÿÿÿÿ8øï¥µ²2

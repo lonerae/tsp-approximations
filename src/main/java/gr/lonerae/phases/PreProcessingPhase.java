@@ -1,0 +1,113 @@
+package gr.lonerae.phases;
+
+import gr.lonerae.model.Point;
+import lombok.Getter;
+
+import java.util.*;
+
+@Getter
+public class PreProcessingPhase {
+
+    private List<Point> points;
+    private final int size;
+
+    private final Map<Integer, Point> square = new HashMap<>();
+    private double squareSide = 0;
+
+    private final int e = 1;
+
+    public PreProcessingPhase(List<Point> points) {
+        this.points = points;
+        this.size = points.size();
+    }
+
+    public void preprocess() {
+        this.createBoundingBox();
+        this.moveAndScaleBox();
+        this.snapToGrid();
+    }
+
+    private void createBoundingBox() {
+        Point minX = points.getFirst();
+        Point maxX = points.getFirst();
+        Point minY = points.getFirst();
+        Point maxY = points.getFirst();
+        for (Point p : points.subList(1, size)) {
+            if (p.getX() <= minX.getX()) minX = p;
+            else if (p.getX() > maxX.getX()) maxX = p;
+            if (p.getY() <= minY.getY()) minY = p;
+            else if (p.getY() > maxY.getY()) maxY = p;
+        }
+        double maxDistanceX = maxX.getX() - minX.getX();
+        double maxDistanceY = maxY.getY() - minY.getY();
+        if (maxDistanceX >= maxDistanceY) {
+            square.put(0, new Point(minX.getX(), minY.getY() + maxDistanceX));
+            square.put(1, new Point(maxX.getX(), minY.getY() + maxDistanceX));
+            square.put(2, new Point(maxX.getX(), minY.getY()));
+            square.put(3, new Point(minX.getX(), minY.getY()));
+            squareSide = maxDistanceX;
+        } else {
+            square.put(0, new Point(minX.getX(), maxY.getY()));
+            square.put(1, new Point(minX.getX() + maxDistanceY, maxY.getY()));
+            square.put(2, new Point(minX.getX() + maxDistanceY, minY.getY()));
+            square.put(3, new Point(minX.getX(), minY.getY()));
+            squareSide = maxDistanceY;
+        }
+    }
+
+    private void moveAndScaleBox() {
+        // Move box to origin
+        for (Point p : points) {
+            p.setX(p.getX() - square.get(3).getX());
+            p.setY(p.getY() - square.get(3).getY());
+        }
+        for (Point edge : square.values()) {
+            edge.setX(edge.getX() - square.get(3).getX());
+            edge.setY(edge.getY() - square.get(3).getY());
+        }
+        // Scale box
+        for (Point p : points) {
+            p.setX(p.getX() * 8 * size / (e * squareSide));
+            p.setY(p.getY() * 8 * size / (e * squareSide));
+        }
+        for (Point edge : square.values()) {
+            edge.setX(edge.getX() * 8 * size / (e * squareSide));
+            edge.setY(edge.getY() * 8 * size / (e * squareSide));
+        }
+        squareSide = 8.0 * size;
+    }
+
+    private void snapToGrid() {
+        double gridUnit = e * squareSide / (2 * size);
+        horizontalSweep(gridUnit);
+        verticalSweep(gridUnit);
+        // Remove duplicates after perturbation
+        points = new ArrayList<>(new HashSet<>(points));
+    }
+
+    private void horizontalSweep(double gridUnit) {
+        points.sort(Comparator.comparingDouble(Point::getX));
+        int index = 0;
+        double horizontalSweep = 0;
+        while (horizontalSweep < squareSide && index < size) {
+            Point currentPoint = points.get(index);
+            if (currentPoint.getX() >= horizontalSweep && currentPoint.getX() < horizontalSweep + gridUnit) {
+                currentPoint.setX(horizontalSweep);
+                index++;
+            } else horizontalSweep += gridUnit;
+        }
+    }
+
+    private void verticalSweep(double gridUnit) {
+        points.sort(Comparator.comparingDouble(Point::getY));
+        int index = 0;
+        double verticalSweep = 0;
+        while (verticalSweep < squareSide && index < size) {
+            Point currentPoint = points.get(index);
+            if (currentPoint.getY() >= verticalSweep && currentPoint.getY() < verticalSweep + gridUnit) {
+                currentPoint.setY(verticalSweep);
+                index++;
+            } else verticalSweep += gridUnit;
+        }
+    }
+}
