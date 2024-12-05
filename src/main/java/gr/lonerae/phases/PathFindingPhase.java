@@ -94,9 +94,12 @@ public class PathFindingPhase {
                         if (x == 0) {
                             System.out.println("TSP FOUND");
                             double l = 0;
+                            List<Segment> tsp = new ArrayList<>();
                             for (Segment s : temp) {
                                 l += s.getLength();
+                                breakIntoSegments(tsp, s);
                             }
+                            synthesize(tsp);
                             System.out.println("LENGTH: " + l);
                             temp.removeLast();
                         } else if (x < 0) {
@@ -113,12 +116,66 @@ public class PathFindingPhase {
         else return -1;
     }
 
+    private void breakIntoSegments(List<Segment> tsp, Segment s) {
+        if (s.getInner().isEmpty()) {
+            tsp.add(s);
+        }
+        else {
+            for (Segment segment : s.getInner().getFirst().getSegments()) {
+                breakIntoSegments(tsp, segment);
+            }
+        }
+    }
+
+    private void synthesize(List<Segment> tsp) {
+        StringBuilder builder = new StringBuilder();
+        int count = 1;
+        builder.append(tsp.getFirst());
+        Point current = tsp.getFirst().getEnd();
+        int currentIndex = 0;
+        while (count < tsp.size()) {
+            int i = 0;
+            while (i < tsp.size()) {
+                if (i != currentIndex) {
+                    if (tsp.get(i).getStart().equals(current)) {
+                        if (!isNull(tsp.get(i).getTown()) && !tsp.get(i).getTown().equals(tsp.get(i).getEnd())) {
+                            builder.append(" -> ").append(tsp.get(i).getTown());
+                        }
+                        builder.append(" -> ").append(tsp.get(i).getEnd());
+                        current = tsp.get(i).getEnd();
+                        currentIndex = i;
+                        count++;
+                        break;
+                    } else if (tsp.get(i).getEnd().equals(current)) {
+                        if (!isNull(tsp.get(i).getTown()) && !tsp.get(i).getTown().equals(tsp.get(i).getStart())) {
+                            builder.append(" -> ").append(tsp.get(i).getTown());
+                        }
+                        builder.append(" -> ").append(tsp.get(i).getStart());
+                        current = tsp.get(i).getStart();
+                        currentIndex = i;
+                        count++;
+                        break;
+                    }
+                }
+                i++;
+            }
+        }
+        System.out.println(builder);
+    }
 
     private List<Segment> updateSegments() {
         List<Segment> segments = new ArrayList<>();
         for (Path path : solutions) {
             Segment newSegment = new Segment(path.getEntrance(), path.getExit());
             newSegment.setLength(path.getLength());
+            if (!path.getSegments().isEmpty()) {
+                List<Path> detail = path.getSegments().getFirst().getInner();
+                if (!detail.isEmpty()) {
+                    newSegment.getInner().add(detail.getFirst());
+                } else {
+                    newSegment.getInner().add(path);
+                }
+            }
             boolean distinct = true;
             for (Segment segment : segments) {
                 if (SegmentUtils.commonEdges(newSegment, segment)) {
@@ -139,7 +196,10 @@ public class PathFindingPhase {
         for (int i = 0; i < node.getPortals().size() - 1; i++) {
             for (int j = i + 1; j < node.getPortals().size(); j++) {
                 Segment segment = new Segment(node.getPortals().get(i), node.getPortals().get(j));
-                if (node.getPoints().size() == 1) segment.setLength(SegmentUtils.getPathLengthThroughPoint(segment, node.getPoints().getFirst()));
+                if (node.getPoints().size() == 1) {
+                    segment.setLength(SegmentUtils.getPathLengthThroughPoint(segment, node.getPoints().getFirst()));
+                    segment.setTown(node.getPoints().getFirst());
+                }
                 else segment.setLength(SegmentUtils.getPathLength(segment));
                 node.getSegments().add(segment);
             }
@@ -228,12 +288,11 @@ public class PathFindingPhase {
             solution.setEntrance(entrance);
             solution.setExit(exit);
             for (Segment p : singleSolution) {
-                if (node.getPoints().size() == 1) {
-                    solution.addLength(SegmentUtils.getPathLengthThroughPoint(p, node.getPoints().getFirst()));
-                } else {
-                    solution.addLength(SegmentUtils.getPathLength(p));
-                }
+                solution.addLength(p.getLength());
                 solution.addSegment(p);
+                if (!p.getInner().isEmpty()) {
+                    solution.getInner().add(p.getInner().stream().distinct().toList().getFirst());
+                }
             }
             solutions.add(solution);
         }

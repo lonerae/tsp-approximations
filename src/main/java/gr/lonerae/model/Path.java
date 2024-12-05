@@ -3,8 +3,7 @@ package gr.lonerae.model;
 import gr.lonerae.utils.SegmentUtils;
 import lombok.Data;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 import static java.util.Objects.isNull;
 
@@ -15,6 +14,7 @@ public class Path {
     private double length = 0.0;
 
     private List<Segment> segments = new ArrayList<>();
+    private List<Path> inner = new ArrayList<>();
 
     public void addSegment(Segment segment) {
         segments.add(segment);
@@ -22,6 +22,13 @@ public class Path {
 
     public void addLength(double addition) {
         this.length += addition;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        Path path = (Path) o;
+        return this.toString().equals(path.toString());
     }
 
     @Override
