@@ -27,7 +27,7 @@ public class Segment {
         if (isNull(town) || town.equals(start) || town.equals(end)) {
             return start + " -> " + end;
         } else {
-            return start + " -> " + town + " -> " + end;
+            return start + " -> T" + town + " -> " + end;
         }
 
     }

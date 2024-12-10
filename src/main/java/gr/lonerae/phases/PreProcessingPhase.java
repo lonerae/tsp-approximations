@@ -1,6 +1,7 @@
 package gr.lonerae.phases;
 
 import gr.lonerae.model.Point;
+import gr.lonerae.utils.CommonUtils;
 import lombok.Getter;
 
 import java.util.*;
@@ -14,7 +15,7 @@ public class PreProcessingPhase {
     private final Map<Integer, Point> square = new HashMap<>();
     private double squareSide = 0;
 
-    private final int e = 1;
+    private static final int e = 1;
 
     public PreProcessingPhase(List<Point> points) {
         this.points = points;
@@ -58,21 +59,21 @@ public class PreProcessingPhase {
     private void moveAndScaleBox() {
         // Move box to origin
         for (Point p : points) {
-            p.setX(p.getX() - square.get(3).getX());
-            p.setY(p.getY() - square.get(3).getY());
+            p.setX(CommonUtils.round(p.getX() - square.get(3).getX()));
+            p.setY(CommonUtils.round(p.getY() - square.get(3).getY()));
         }
         for (Point edge : square.values()) {
-            edge.setX(edge.getX() - square.get(3).getX());
-            edge.setY(edge.getY() - square.get(3).getY());
+            edge.setX(CommonUtils.round(edge.getX() - square.get(3).getX()));
+            edge.setY(CommonUtils.round(edge.getY() - square.get(3).getY()));
         }
         // Scale box
         for (Point p : points) {
-            p.setX(p.getX() * 8 * size / (e * squareSide));
-            p.setY(p.getY() * 8 * size / (e * squareSide));
+            p.setX(CommonUtils.round(p.getX() * 8 * size / (e * squareSide)));
+            p.setY(CommonUtils.round(p.getY() * 8 * size / (e * squareSide)));
         }
         for (Point edge : square.values()) {
-            edge.setX(edge.getX() * 8 * size / (e * squareSide));
-            edge.setY(edge.getY() * 8 * size / (e * squareSide));
+            edge.setX(CommonUtils.round(edge.getX() * 8 * size / (e * squareSide)));
+            edge.setY(CommonUtils.round(edge.getY() * 8 * size / (e * squareSide)));
         }
         squareSide = 8.0 * size;
     }
@@ -92,7 +93,11 @@ public class PreProcessingPhase {
         while (horizontalSweep < squareSide && index < size) {
             Point currentPoint = points.get(index);
             if (currentPoint.getX() >= horizontalSweep && currentPoint.getX() < horizontalSweep + gridUnit) {
-                currentPoint.setX(horizontalSweep);
+                if ((currentPoint.getX() > horizontalSweep + (gridUnit / 2.0)) && (horizontalSweep + gridUnit <= squareSide)) {
+                    currentPoint.setX(horizontalSweep + gridUnit);
+                } else {
+                    currentPoint.setX(horizontalSweep);
+                }
                 index++;
             } else horizontalSweep += gridUnit;
         }
@@ -105,7 +110,11 @@ public class PreProcessingPhase {
         while (verticalSweep < squareSide && index < size) {
             Point currentPoint = points.get(index);
             if (currentPoint.getY() >= verticalSweep && currentPoint.getY() < verticalSweep + gridUnit) {
-                currentPoint.setY(verticalSweep);
+                if ((currentPoint.getY() > verticalSweep + (gridUnit / 2.0)) && (verticalSweep + gridUnit <= squareSide)) {
+                    currentPoint.setY(verticalSweep + gridUnit);
+                } else {
+                    currentPoint.setY(verticalSweep);
+                }
                 index++;
             } else verticalSweep += gridUnit;
         }

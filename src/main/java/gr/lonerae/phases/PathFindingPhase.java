@@ -214,14 +214,9 @@ public class PathFindingPhase {
                 parent.getLowerLeft()
         );
         for (QuadNode node : children) {
-            for (int i = 0; i < node.getPortals().size() - 1; i++) {
-                for (int j = i + 1; j < node.getPortals().size(); j++) {
-                    if (QuadTreeUtils.pointIsOnNodeSides(parent, node.getPortals().get(i))) {
-                        parentPortals.add(node.getPortals().get(i));
-                    }
-                    if (QuadTreeUtils.pointIsOnNodeSides(parent, node.getPortals().get(j))) {
-                        parentPortals.add(node.getPortals().get(j));
-                    }
+            for (int i = 0; i < node.getPortals().size(); i++) {
+                if (QuadTreeUtils.pointIsOnNodeSides(parent, node.getPortals().get(i))) {
+                    parentPortals.add(node.getPortals().get(i));
                 }
             }
         }

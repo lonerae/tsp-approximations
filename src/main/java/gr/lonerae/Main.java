@@ -8,19 +8,42 @@ import gr.lonerae.phases.QuadtreePhase;
 import java.util.*;
 
 public class Main {
+    // INITIAL
     private static final ArrayList<Point> points = new ArrayList<>(List.of(
-        new Point(1,3),
-        new Point(2,5),
-        new Point(-1,7),
-        new Point(4,4),
-        new Point(-3,6),
-        new Point(8,-2),
-        new Point(5,-5),
-        new Point(1,7)
+            new Point(1,3),
+            new Point(2,5),
+            new Point(-1,7),
+            new Point(4,4),
+            new Point(-3,6),
+            new Point(8,-2),
+            new Point(5,-5),
+            new Point(1,7)
     ));
+    // RANDOM 1ST
+//    private static final ArrayList<Point> points = new ArrayList<>(List.of(
+//            new Point(5.7, -0.33),
+//            new Point(-9.2, 7.63),
+//            new Point(-9.54, 1.92),
+//            new Point(1.77, -3.95),
+//            new Point(0.83, 0.22),
+//            new Point(4.61, -3.55),
+//            new Point(1.96, -7.6),
+//            new Point(0.63, 6.84),
+//            new Point(9.41, -4.67),
+//            new Point(-2.39, -6.93)
+//    ));
 
+    private static final int TOWN_NUMBER = 10;
+    private static final double RANGE_MIN = -10.0;
+    private static final double RANGE_MAX = 10.0;
+    private static final Random rand = new Random();
 
     public static void main(String[] args) {
+//        ArrayList<Point> points = new ArrayList<>();
+//        for (int i = 0; i < TOWN_NUMBER; i++) {
+//            points.add(new Point(Math.round((RANGE_MIN + (RANGE_MAX - RANGE_MIN) * rand.nextDouble())*100.0)/100.0, Math.round((RANGE_MIN + (RANGE_MAX - RANGE_MIN) * rand.nextDouble())*100.0)/100.0));
+//        }
+
         PreProcessingPhase preProcessingPhaseInstance;
         QuadtreePhase quadtreePhaseInstance;
         PathFindingPhase pathFindingPhase;
