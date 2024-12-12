@@ -9,6 +9,7 @@ import java.util.List;
 public class QuadNode {
     private Point lowerLeftCorner;
     private double side;
+    private int traversed;
     private List<Point> points = new ArrayList<>();
     private List<Point> portals = new ArrayList<>();
 

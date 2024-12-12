@@ -33,9 +33,9 @@ public class Main {
 //            new Point(-2.39, -6.93)
 //    ));
 
-    private static final int TOWN_NUMBER = 10;
-    private static final double RANGE_MIN = -10.0;
-    private static final double RANGE_MAX = 10.0;
+    private static final int TOWN_NUMBER = 1000;
+    private static final double RANGE_MIN = -10000.0;
+    private static final double RANGE_MAX = 10000.0;
     private static final Random rand = new Random();
 
     public static void main(String[] args) {
@@ -55,6 +55,6 @@ public class Main {
         quadtreePhaseInstance.assignPortals();
 
         pathFindingPhase = new PathFindingPhase(preProcessingPhaseInstance.getSquareSide());
-        pathFindingPhase.iterateNodes(quadtreePhaseInstance);
+        pathFindingPhase.iterateNodesOLD(quadtreePhaseInstance);
     }
 }

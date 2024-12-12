@@ -31,7 +31,7 @@ public class PathFindingPhase {
         this.squareSize = squareSize;
     }
 
-    public void iterateNodes(QuadtreePhase quadtreePhaseInstance) {
+    public void iterateNodesOLD(QuadtreePhase quadtreePhaseInstance) {
         QuadNode parent = null;
         QuadNode prevParent = null;
         Set<Point> parentPortals = new HashSet<>();
@@ -54,11 +54,31 @@ public class PathFindingPhase {
             }
             calculateNodePaths(node);
             iteratedNodes.add(node);
-            calculateParentPortals(parent, parentPortals);
+            calculateParentPortalsOLD(parent, parentPortals);
         }
         if (!isNull(prevParent)) {
             prevParent.setSegments(updateSegments());
             iteratedNodes.add(prevParent);
+        }
+        calculateTSP();
+    }
+    public void iterateNodes(QuadtreePhase quadtreePhaseInstance) {
+        for (QuadNode node : quadtreePhaseInstance.getQuadNodes()) {
+            calculateNodePaths(node);
+            iteratedNodes.add(node);
+            calculateParentPortals(node.getParent(), node.getPortals());
+            QuadNode parent = node.getParent();
+            parent.setTraversed(parent.getTraversed() + 1);
+            while (!isNull(parent) && parent.getTraversed() == 4) {
+                parentPaths(parent);
+                parent.setSegments(updateSegments());
+                iteratedNodes.add(parent);
+                if (!isNull(parent.getParent())) {
+                    calculateParentPortals(parent.getParent(), parent.getPortals());
+                    parent.getParent().setTraversed(parent.getParent().getTraversed() + 1);
+                }
+                parent = parent.getParent();
+            }
         }
         calculateTSP();
     }
@@ -99,7 +119,8 @@ public class PathFindingPhase {
                                 l += s.getLength();
                                 breakIntoSegments(tsp, s);
                             }
-                            synthesize(tsp);
+                            // TODO: synthesize is too slow
+                             synthesize(tsp);
                             System.out.println("LENGTH: " + l);
                             temp.removeLast();
                         } else if (x < 0) {
@@ -206,7 +227,7 @@ public class PathFindingPhase {
         }
     }
 
-    private void calculateParentPortals(QuadNode parent, Set<Point> parentPortals) {
+    private void calculateParentPortalsOLD(QuadNode parent, Set<Point> parentPortals) {
         List<QuadNode> children = List.of(
                 parent.getUpperLeft(),
                 parent.getUpperRight(),
@@ -218,6 +239,13 @@ public class PathFindingPhase {
                 if (QuadTreeUtils.pointIsOnNodeSides(parent, node.getPortals().get(i))) {
                     parentPortals.add(node.getPortals().get(i));
                 }
+            }
+        }
+    }
+    private void calculateParentPortals(QuadNode parent, List<Point> portals) {
+        for (Point portal : portals) {
+            if (QuadTreeUtils.pointIsOnNodeSides(parent, portal)) {
+                parent.getPortals().add(portal);
             }
         }
     }
