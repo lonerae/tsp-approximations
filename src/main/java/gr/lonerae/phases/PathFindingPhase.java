@@ -8,14 +8,12 @@ import gr.lonerae.utils.QuadTreeUtils;
 import gr.lonerae.utils.SegmentUtils;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import static java.util.Objects.isNull;
 
 public class PathFindingPhase {
-    private double squareSize;
+    private final double squareSize;
 
     private Point entrance;
     private Point exit;
@@ -31,37 +29,6 @@ public class PathFindingPhase {
         this.squareSize = squareSize;
     }
 
-    public void iterateNodesOLD(QuadtreePhase quadtreePhaseInstance) {
-        QuadNode parent = null;
-        QuadNode prevParent = null;
-        Set<Point> parentPortals = new HashSet<>();
-        for (QuadNode node : quadtreePhaseInstance.getQuadNodes()) {
-            if (isNull(parent)) {
-                parent = node.getParent();
-            } else if (!parent.equals(node.getParent())) {
-                // Update previous parent node
-                if (!isNull(prevParent)) {
-                    prevParent.setSegments(updateSegments());
-                    iteratedNodes.add(prevParent);
-                }
-                prevParent = parent;
-                // Prepare current parent node
-                parent.setPortals(new ArrayList<>(parentPortals));
-                parentPaths(parent);
-                // Get ready for next parent node
-                parent = node.getParent();
-                parentPortals = new HashSet<>();
-            }
-            calculateNodePaths(node);
-            iteratedNodes.add(node);
-            calculateParentPortalsOLD(parent, parentPortals);
-        }
-        if (!isNull(prevParent)) {
-            prevParent.setSegments(updateSegments());
-            iteratedNodes.add(prevParent);
-        }
-        calculateTSP();
-    }
     public void iterateNodes(QuadtreePhase quadtreePhaseInstance) {
         for (QuadNode node : quadtreePhaseInstance.getQuadNodes()) {
             calculateNodePaths(node);
@@ -81,9 +48,13 @@ public class PathFindingPhase {
             }
         }
         calculateTSP();
+        if (!isNull(winner)) {
+            synthesize(winner);
+            System.out.println("LENGTH: " + target);
+        }
     }
 
-    private ArrayList<Segment> temp = new ArrayList<>();
+    private final ArrayList<Segment> temp = new ArrayList<>();
 
     private void calculateTSP() {
         ArrayList<QuadNode> finalNodes = new ArrayList<>();
@@ -100,6 +71,8 @@ public class PathFindingPhase {
         }
     }
 
+    private double target = 0.0;
+    private List<Segment> winner;
 
     private double constructTSP(Point entrance, Point stitch, List<QuadNode> unvisited) {
         for (QuadNode node : unvisited) {
@@ -107,26 +80,7 @@ public class PathFindingPhase {
                 ArrayList<QuadNode> updatedUnvisited = new ArrayList<>(unvisited);
                 updatedUnvisited.remove(node);
                 for (Segment newSegment : node.getSegments()) {
-                    Point newStitch = SegmentUtils.contains(newSegment, stitch);
-                    if (!isNull(newStitch)) {
-                        temp.add(newSegment);
-                        double x = constructTSP(entrance, newStitch, updatedUnvisited);
-                        if (x == 0) {
-                            System.out.println("TSP FOUND");
-                            double l = 0;
-                            List<Segment> tsp = new ArrayList<>();
-                            for (Segment s : temp) {
-                                l += s.getLength();
-                                breakIntoSegments(tsp, s);
-                            }
-                            // TODO: synthesize is too slow
-                             synthesize(tsp);
-                            System.out.println("LENGTH: " + l);
-                            temp.removeLast();
-                        } else if (x < 0) {
-                            temp.removeLast();
-                        }
-                    }
+                    chainSegment(entrance, stitch, newSegment, updatedUnvisited);
                 }
                 return -1;
             }
@@ -137,13 +91,40 @@ public class PathFindingPhase {
         else return -1;
     }
 
+    private void chainSegment(Point entrance, Point stitch, Segment newSegment, ArrayList<QuadNode> updatedUnvisited) {
+        Point newStitch = SegmentUtils.contains(newSegment, stitch);
+        if (!isNull(newStitch)) {
+            temp.add(newSegment);
+            double x = constructTSP(entrance, newStitch, updatedUnvisited);
+            if (x == 0) {
+                updateOptimalTSP();
+            } else if (x < 0) {
+                temp.removeLast();
+            }
+        }
+    }
+
+    private void updateOptimalTSP() {
+        double l = 0;
+        List<Segment> tsp = new ArrayList<>();
+        for (Segment s : temp) {
+            l += s.getLength();
+            breakIntoSegments(tsp, s);
+        }
+        if (target == 0 || l < target) {
+            target = l;
+            winner = tsp;
+        }
+        temp.removeLast();
+    }
+
     private void breakIntoSegments(List<Segment> tsp, Segment s) {
         if (s.getInner().isEmpty()) {
             tsp.add(s);
         }
         else {
-            for (Segment segment : s.getInner().getFirst().getSegments()) {
-                breakIntoSegments(tsp, segment);
+            for (Path path : s.getInner()) {
+                breakIntoSegments(tsp, path.getSegments().getFirst());
             }
         }
     }
@@ -189,14 +170,7 @@ public class PathFindingPhase {
         for (Path path : solutions) {
             Segment newSegment = new Segment(path.getEntrance(), path.getExit());
             newSegment.setLength(path.getLength());
-            if (!path.getSegments().isEmpty()) {
-                List<Path> detail = path.getSegments().getFirst().getInner();
-                if (!detail.isEmpty()) {
-                    newSegment.getInner().add(detail.getFirst());
-                } else {
-                    newSegment.getInner().add(path);
-                }
-            }
+            dive(path, newSegment);
             boolean distinct = true;
             for (Segment segment : segments) {
                 if (SegmentUtils.commonEdges(newSegment, segment)) {
@@ -213,6 +187,20 @@ public class PathFindingPhase {
         return segments;
     }
 
+    private void dive(Path path, Segment newSegment) {
+        for (Segment s : path.getSegments()) {
+            List<Path> detail = s.getInner();
+            if (!detail.isEmpty()) {
+                for (Path p : detail) {
+                    dive(p, newSegment);
+                }
+            } else {
+                newSegment.getInner().add(SegmentUtils.toPath(s));
+            }
+        }
+
+    }
+
     private void calculateNodePaths(QuadNode node) {
         for (int i = 0; i < node.getPortals().size() - 1; i++) {
             for (int j = i + 1; j < node.getPortals().size(); j++) {
@@ -227,21 +215,6 @@ public class PathFindingPhase {
         }
     }
 
-    private void calculateParentPortalsOLD(QuadNode parent, Set<Point> parentPortals) {
-        List<QuadNode> children = List.of(
-                parent.getUpperLeft(),
-                parent.getUpperRight(),
-                parent.getLowerRight(),
-                parent.getLowerLeft()
-        );
-        for (QuadNode node : children) {
-            for (int i = 0; i < node.getPortals().size(); i++) {
-                if (QuadTreeUtils.pointIsOnNodeSides(parent, node.getPortals().get(i))) {
-                    parentPortals.add(node.getPortals().get(i));
-                }
-            }
-        }
-    }
     private void calculateParentPortals(QuadNode parent, List<Point> portals) {
         for (Point portal : portals) {
             if (QuadTreeUtils.pointIsOnNodeSides(parent, portal)) {

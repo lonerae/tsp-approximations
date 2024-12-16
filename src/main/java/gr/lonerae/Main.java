@@ -8,7 +8,7 @@ import gr.lonerae.phases.QuadtreePhase;
 import java.util.*;
 
 public class Main {
-    // INITIAL
+//    INITIAL
     private static final ArrayList<Point> points = new ArrayList<>(List.of(
             new Point(1,3),
             new Point(2,5),
@@ -19,23 +19,11 @@ public class Main {
             new Point(5,-5),
             new Point(1,7)
     ));
-    // RANDOM 1ST
-//    private static final ArrayList<Point> points = new ArrayList<>(List.of(
-//            new Point(5.7, -0.33),
-//            new Point(-9.2, 7.63),
-//            new Point(-9.54, 1.92),
-//            new Point(1.77, -3.95),
-//            new Point(0.83, 0.22),
-//            new Point(4.61, -3.55),
-//            new Point(1.96, -7.6),
-//            new Point(0.63, 6.84),
-//            new Point(9.41, -4.67),
-//            new Point(-2.39, -6.93)
-//    ));
 
-    private static final int TOWN_NUMBER = 1000;
-    private static final double RANGE_MIN = -10000.0;
-    private static final double RANGE_MAX = 10000.0;
+
+    private static final int TOWN_NUMBER = 10;
+    private static final double RANGE_MIN = -100.0;
+    private static final double RANGE_MAX = 100.0;
     private static final Random rand = new Random();
 
     public static void main(String[] args) {
@@ -55,6 +43,6 @@ public class Main {
         quadtreePhaseInstance.assignPortals();
 
         pathFindingPhase = new PathFindingPhase(preProcessingPhaseInstance.getSquareSide());
-        pathFindingPhase.iterateNodesOLD(quadtreePhaseInstance);
+        pathFindingPhase.iterateNodes(quadtreePhaseInstance);
     }
 }

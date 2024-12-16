@@ -1,7 +1,10 @@
 package gr.lonerae.utils;
 
+import gr.lonerae.model.Path;
 import gr.lonerae.model.Segment;
 import gr.lonerae.model.Point;
+
+import java.util.List;
 
 public class SegmentUtils {
     private SegmentUtils() {}
@@ -27,5 +30,14 @@ public class SegmentUtils {
 
     private static double getEuclideanDistance(Point start, Point end) {
         return Math.sqrt(Math.pow(end.getX() - start.getX(), 2) + Math.pow(end.getY() - start.getY(), 2));
+    }
+
+    public static Path toPath(Segment s) {
+        Path path = new Path();
+        path.setEntrance(s.getStart());
+        path.setExit(s.getEnd());
+        path.setSegments(List.of(s));
+        path.setLength(s.getLength());
+        return path;
     }
 }
