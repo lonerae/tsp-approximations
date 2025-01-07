@@ -20,8 +20,8 @@ public class Main {
             new Point(1,7)
     ));
 
-
-    private static final int TOWN_NUMBER = 10;
+    private static final int PORTALS_PER_NODE_SIDE = 2;
+    private static final int TOWN_NUMBER = 100;
     private static final double RANGE_MIN = -100.0;
     private static final double RANGE_MAX = 100.0;
     private static final Random rand = new Random();
@@ -39,7 +39,7 @@ public class Main {
         preProcessingPhaseInstance = new PreProcessingPhase(points);
         preProcessingPhaseInstance.preprocess();
 
-        quadtreePhaseInstance = new QuadtreePhase(preProcessingPhaseInstance.getSquareSide(), preProcessingPhaseInstance.getPoints());
+        quadtreePhaseInstance = new QuadtreePhase(preProcessingPhaseInstance.getSquareSide(), preProcessingPhaseInstance.getPoints(), PORTALS_PER_NODE_SIDE);
         quadtreePhaseInstance.assignPortals();
 
         pathFindingPhase = new PathFindingPhase(preProcessingPhaseInstance.getSquareSide());

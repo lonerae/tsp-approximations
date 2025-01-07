@@ -18,11 +18,14 @@ public class QuadtreePhase {
     private final HashSet<Point> portals = new HashSet<>();
     private final ArrayList<QuadNode> quadNodes = new ArrayList<>();
 
-    public QuadtreePhase(double squareSide, List<Point> points) {
+    private final int portalsPerNodeSide;
+
+    public QuadtreePhase(double squareSide, List<Point> points, int portalsPerNodeSide) {
         root = new QuadNode();
         root.setLowerLeftCorner(new Point(0,0));
         root.setSide(squareSide);
         root.setPoints(points);
+        this.portalsPerNodeSide = portalsPerNodeSide;
     }
 
     public void assignPortals() {
@@ -88,7 +91,7 @@ public class QuadtreePhase {
         ArrayList<Point> nodeCorners = QuadTreeUtils.getQuadNodeCorners(node);
         corners.addAll(nodeCorners);
         // Update portals
-        ArrayList<Point> nodePortals = QuadTreeUtils.getQuadNodePortals(node);
+        ArrayList<Point> nodePortals = QuadTreeUtils.getQuadNodePortals(node, portalsPerNodeSide);
         for (Point portal : nodePortals) {
             if (portal.getX() != 0 && portal.getY() != 0 && portal.getX() != root.getSide() && portal.getY() != root.getSide()) {
                 portals.add(portal);
@@ -99,7 +102,7 @@ public class QuadtreePhase {
 
     private void assignPortalsToQuadNodes() {
         for (QuadNode node : quadNodes) {
-            ArrayList<Point> nodePortals = QuadTreeUtils.getQuadNodePortals(node);
+            ArrayList<Point> nodePortals = QuadTreeUtils.getQuadNodePortals(node, portalsPerNodeSide);
             for (Point possiblePortal : nodePortals) {
                 divide(possiblePortal, node, 0);
             }
@@ -109,9 +112,9 @@ public class QuadtreePhase {
     private void divide(Point portal, QuadNode node, int depth) {
         if (
                 portal.getX() == 0 ||
-                        portal.getY() == 0 ||
-                        portal.getX() == root.getSide() ||
-                        portal.getY() == root.getSide()
+                portal.getY() == 0 ||
+                portal.getX() == root.getSide() ||
+                portal.getY() == root.getSide()
         ) return;
         if (portals.contains(portal)) node.getPortals().add(portal);
         else {

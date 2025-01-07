@@ -17,12 +17,14 @@ public class QuadTreeUtils {
         return corners;
     }
 
-    public static ArrayList<Point> getQuadNodePortals(QuadNode node) {
+    public static ArrayList<Point> getQuadNodePortals(QuadNode node, int numOfPortals) {
         ArrayList<Point> portals = new ArrayList<>();
-        portals.add(PointUtils.shiftXY(node.getLowerLeftCorner(), node.getSide()/2, 0));
-        portals.add(PointUtils.shiftXY(node.getLowerLeftCorner(), 0, node.getSide()/2));
-        portals.add(PointUtils.shiftXY(node.getLowerLeftCorner(), node.getSide(), node.getSide()/2));
-        portals.add(PointUtils.shiftXY(node.getLowerLeftCorner(), node.getSide()/2, node.getSide()));
+        for (int i = 0; i < numOfPortals; i++) {
+            portals.add(PointUtils.shiftXY(node.getLowerLeftCorner(), ((i+1) * node.getSide()) / (numOfPortals + 1), 0));
+            portals.add(PointUtils.shiftXY(node.getLowerLeftCorner(), 0, ((i+1) * node.getSide()) / (numOfPortals + 1)));
+            portals.add(PointUtils.shiftXY(node.getLowerLeftCorner(), node.getSide(), ((i+1) * node.getSide()) / (numOfPortals + 1)));
+            portals.add(PointUtils.shiftXY(node.getLowerLeftCorner(), ((i+1) * node.getSide()) / (numOfPortals + 1), node.getSide()));
+        }
         return portals;
     }
 
