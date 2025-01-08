@@ -15,7 +15,7 @@ public class PreProcessingPhase {
     private final Map<Integer, Point> square = new HashMap<>();
     private double squareSide = 0;
 
-    private static final int e = 1;
+    private static final int E = 1;
 
     public PreProcessingPhase(List<Point> points) {
         this.points = points;
@@ -68,18 +68,18 @@ public class PreProcessingPhase {
         }
         // Scale box
         for (Point p : points) {
-            p.setX(CommonUtils.round(p.getX() * 8 * size / (e * squareSide)));
-            p.setY(CommonUtils.round(p.getY() * 8 * size / (e * squareSide)));
+            p.setX(CommonUtils.round(p.getX() * 8 * size / (E * squareSide)));
+            p.setY(CommonUtils.round(p.getY() * 8 * size / (E * squareSide)));
         }
         for (Point edge : square.values()) {
-            edge.setX(CommonUtils.round(edge.getX() * 8 * size / (e * squareSide)));
-            edge.setY(CommonUtils.round(edge.getY() * 8 * size / (e * squareSide)));
+            edge.setX(CommonUtils.round(edge.getX() * 8 * size / (E * squareSide)));
+            edge.setY(CommonUtils.round(edge.getY() * 8 * size / (E * squareSide)));
         }
         squareSide = 8.0 * size;
     }
 
     private void snapToGrid() {
-        double gridUnit = e * squareSide / (2 * size);
+        double gridUnit = E * squareSide / (2 * size);
         horizontalSweep(gridUnit);
         verticalSweep(gridUnit);
         // Remove duplicates after perturbation
