@@ -21,9 +21,9 @@ public class Main {
 //    ));
 
     private static final int MAXIMUM_PORTALS_PER_NODE_SIDE = 7;
-    private static final int TOWN_NUMBER = 10;
-    private static final double RANGE_MIN = -100.0;
-    private static final double RANGE_MAX = 100.0;
+    private static final int TOWN_NUMBER = 20;
+    private static final double RANGE_MIN = -1000.0;
+    private static final double RANGE_MAX = 1000.0;
     private static final Random rand = new Random();
 
     public static void main(String[] args) {
@@ -32,16 +32,19 @@ public class Main {
             points.add(new Point(Math.round((RANGE_MIN + (RANGE_MAX - RANGE_MIN) * rand.nextDouble())*100.0)/100.0, Math.round((RANGE_MIN + (RANGE_MAX - RANGE_MIN) * rand.nextDouble())*100.0)/100.0));
         }
 
+        PreProcessingPhase preProcessingPhaseInstance;
+        preProcessingPhaseInstance = new PreProcessingPhase(points);
+        preProcessingPhaseInstance.preprocess();
+        for (Point point : preProcessingPhaseInstance.getPoints()) {
+            System.out.println(point);
+        }
+
         for (int portalsPerNodeSide = 1; portalsPerNodeSide <= MAXIMUM_PORTALS_PER_NODE_SIDE; portalsPerNodeSide++) {
             System.out.println("********************");
             System.out.println("PORTALS: " + portalsPerNodeSide + "\n");
 
-            PreProcessingPhase preProcessingPhaseInstance;
             QuadtreePhase quadtreePhaseInstance;
             PathFindingPhase pathFindingPhase;
-
-            preProcessingPhaseInstance = new PreProcessingPhase(points);
-            preProcessingPhaseInstance.preprocess();
 
             quadtreePhaseInstance = new QuadtreePhase(preProcessingPhaseInstance.getSquareSide(), preProcessingPhaseInstance.getPoints(), portalsPerNodeSide);
             quadtreePhaseInstance.assignPortals();
