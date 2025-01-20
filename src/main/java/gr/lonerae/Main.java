@@ -4,12 +4,13 @@ import gr.lonerae.model.Point;
 import gr.lonerae.phases.PathFindingPhase;
 import gr.lonerae.phases.PreProcessingPhase;
 import gr.lonerae.phases.QuadtreePhase;
+import gr.lonerae.utils.FileUtils;
 
 import java.util.*;
 
 public class Main {
 //    BASE TEST
-//    private static final ArrayList<Point> points = new ArrayList<>(List.of(
+//    private static final List<Point> points = new ArrayList<>(List.of(
 //            new Point(1,3),
 //            new Point(2,5),
 //            new Point(-1,7),
@@ -21,16 +22,18 @@ public class Main {
 //    ));
 
     private static final int MAXIMUM_PORTALS_PER_NODE_SIDE = 7;
-    private static final int TOWN_NUMBER = 20;
+    private static final int TOWN_NUMBER = 50;
     private static final double RANGE_MIN = -1000.0;
     private static final double RANGE_MAX = 1000.0;
     private static final Random rand = new Random();
 
     public static void main(String[] args) {
-        ArrayList<Point> points = new ArrayList<>();
+        List<Point> points = new ArrayList<>();
         for (int i = 0; i < TOWN_NUMBER; i++) {
             points.add(new Point(Math.round((RANGE_MIN + (RANGE_MAX - RANGE_MIN) * rand.nextDouble())*100.0)/100.0, Math.round((RANGE_MIN + (RANGE_MAX - RANGE_MIN) * rand.nextDouble())*100.0)/100.0));
         }
+
+//        points = FileUtils.readInstance("/instances/a280.tsp");
 
         PreProcessingPhase preProcessingPhaseInstance;
         preProcessingPhaseInstance = new PreProcessingPhase(points);

@@ -38,7 +38,24 @@ public class PathFindingPhase {
             parent.setTraversed(parent.getTraversed() + 1);
             while (!isNull(parent) && parent.getTraversed() == 4) {
                 parentPaths(parent);
-                parent.setSegments(updateSegments());
+                List<Segment> segTest = updateSegments();
+                parent.setSegments(segTest);
+                for (Segment s : segTest) {
+                    List<Segment> w = parent.getTest().get(s.getStart());
+                    if (!isNull(w)) w.add(s);
+                    else {
+                        ArrayList<Segment> temp2 = new ArrayList<>();
+                        temp2.add(s);
+                        parent.getTest().put(s.getStart(), temp2);
+                    }
+                    w = parent.getTest().get(s.getEnd());
+                    if (!isNull(w)) w.add(s);
+                    else {
+                        ArrayList<Segment> temp2 = new ArrayList<>();
+                        temp2.add(s);
+                        parent.getTest().put(s.getEnd(), temp2);
+                    }
+                }
                 iteratedNodes.add(parent);
                 if (!isNull(parent.getParent())) {
                     calculateParentPortals(parent.getParent(), parent.getPortals());
@@ -211,6 +228,20 @@ public class PathFindingPhase {
                 }
                 else segment.setLength(SegmentUtils.getPathLength(segment));
                 node.getSegments().add(segment);
+                List<Segment> w = node.getTest().get(segment.getStart());
+                if (!isNull(w)) w.add(segment);
+                else {
+                    ArrayList<Segment> temp2 = new ArrayList<>();
+                    temp2.add(segment);
+                    node.getTest().put(segment.getStart(), temp2);
+                }
+                w = node.getTest().get(segment.getEnd());
+                if (!isNull(w)) w.add(segment);
+                else {
+                    ArrayList<Segment> temp2 = new ArrayList<>();
+                    temp2.add(segment);
+                    node.getTest().put(segment.getEnd(), temp2);
+                }
             }
         }
     }
@@ -224,6 +255,7 @@ public class PathFindingPhase {
     }
 
     private void parentPaths(QuadNode parent) {
+        //TODO: possible bottleneck
         List<Point> parentPortals = parent.getPortals();
         pointCountTarget = parent.getPoints().size();
         ArrayList<QuadNode> children = new ArrayList<>(List.of(
@@ -236,6 +268,7 @@ public class PathFindingPhase {
             entrance = parentPortals.get(i);
             for (int j = i + 1; j < parentPortals.size(); j++) {
                 exit = parentPortals.get(j);
+                bestLength = 0;
                 searchChildren(entrance, children);
             }
 
@@ -244,7 +277,7 @@ public class PathFindingPhase {
 
     private void searchChildren(Point stitch, ArrayList<QuadNode> unvisited) {
         for (QuadNode node : unvisited) {
-            if (node.getPortals().contains(stitch)) {
+            if (!isNull(node.getTest().get(stitch))) {
                 iterateNodeSegments(stitch, unvisited, node);
             }
         }
@@ -253,30 +286,32 @@ public class PathFindingPhase {
     private void iterateNodeSegments(Point stitch, ArrayList<QuadNode> unvisited, QuadNode node) {
         ArrayList<QuadNode> updatedUnvisited = new ArrayList<>(unvisited);
         updatedUnvisited.remove(node);
-        for (Segment segment : node.getSegments()) {
-            Point newStitch = SegmentUtils.contains(segment, stitch);
+        for (Segment segment : node.getTest().get(stitch)) {
             // Segment contains previous vertex
-            if (!isNull(newStitch)) {
-                pointCount += node.getPoints().size();
-                singleSolution.add(segment);
-                if (newStitch.equals(exit)) {
-                    savePath(node);
-                } else if (updatedUnvisited.isEmpty()) {
-                    backtrack(node);
-                } else {
-                    searchChildren(newStitch, updatedUnvisited);
-                    backtrack(node);
-                }
+            pointCount += node.getPoints().size();
+            singleSolution.add(segment);
+            currentLength += segment.getLength();
+            if (segment.getStart().equals(exit) || segment.getEnd().equals(exit)) {
+                savePath(node);
+            } else if (updatedUnvisited.isEmpty() || (currentLength > bestLength && bestLength != 0)) {
+                backtrack(node);
+            } else {
+                searchChildren(segment.getStart().equals(stitch) ? segment.getEnd() : segment.getStart(), updatedUnvisited);
+                backtrack(node);
             }
         }
     }
 
     private void backtrack(QuadNode node) {
         if (!singleSolution.isEmpty()) {
+            currentLength -= singleSolution.getLast().getLength();
             singleSolution.removeLast();
             pointCount -= node.getPoints().size();
         }
     }
+
+    private double currentLength = 0;
+    private double bestLength = 0;
 
     private void savePath(QuadNode node) {
         if (pointCount == pointCountTarget) {
@@ -290,8 +325,12 @@ public class PathFindingPhase {
                     solution.getInner().add(p.getInner().stream().distinct().toList().getFirst());
                 }
             }
-            solutions.add(solution);
+            if (bestLength == 0 || solution.getLength() < bestLength) {
+                bestLength = solution.getLength();
+                solutions.add(solution);
+            }
         }
+        currentLength -= singleSolution.getLast().getLength();
         singleSolution.removeLast();
         pointCount -= node.getPoints().size();
     }

@@ -3,6 +3,7 @@ package gr.lonerae.model;
 import lombok.Data;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 @Data
@@ -14,6 +15,7 @@ public class QuadNode {
     private List<Point> portals = new ArrayList<>();
 
     private List<Segment> segments = new ArrayList<>();
+    private HashMap<Point, List<Segment>> test = new HashMap<>();
 
     // Parent
     private QuadNode parent;
