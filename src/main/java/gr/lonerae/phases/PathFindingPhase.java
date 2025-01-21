@@ -41,20 +41,7 @@ public class PathFindingPhase {
                 List<Segment> segTest = updateSegments();
                 parent.setSegments(segTest);
                 for (Segment s : segTest) {
-                    List<Segment> w = parent.getTest().get(s.getStart());
-                    if (!isNull(w)) w.add(s);
-                    else {
-                        ArrayList<Segment> temp2 = new ArrayList<>();
-                        temp2.add(s);
-                        parent.getTest().put(s.getStart(), temp2);
-                    }
-                    w = parent.getTest().get(s.getEnd());
-                    if (!isNull(w)) w.add(s);
-                    else {
-                        ArrayList<Segment> temp2 = new ArrayList<>();
-                        temp2.add(s);
-                        parent.getTest().put(s.getEnd(), temp2);
-                    }
+                    updateSegments(parent, s);
                 }
                 iteratedNodes.add(parent);
                 if (!isNull(parent.getParent())) {
@@ -215,7 +202,6 @@ public class PathFindingPhase {
                 newSegment.getInner().add(SegmentUtils.toPath(s));
             }
         }
-
     }
 
     private void calculateNodePaths(QuadNode node) {
@@ -228,21 +214,25 @@ public class PathFindingPhase {
                 }
                 else segment.setLength(SegmentUtils.getPathLength(segment));
                 node.getSegments().add(segment);
-                List<Segment> w = node.getTest().get(segment.getStart());
-                if (!isNull(w)) w.add(segment);
-                else {
-                    ArrayList<Segment> temp2 = new ArrayList<>();
-                    temp2.add(segment);
-                    node.getTest().put(segment.getStart(), temp2);
-                }
-                w = node.getTest().get(segment.getEnd());
-                if (!isNull(w)) w.add(segment);
-                else {
-                    ArrayList<Segment> temp2 = new ArrayList<>();
-                    temp2.add(segment);
-                    node.getTest().put(segment.getEnd(), temp2);
-                }
+                updateSegments(node, segment);
             }
+        }
+    }
+
+    private static void updateSegments(QuadNode node, Segment segment) {
+        List<Segment> segmentsByEntrance = node.getSegmentsByEntrance().get(segment.getStart());
+        if (!isNull(segmentsByEntrance)) segmentsByEntrance.add(segment);
+        else {
+            ArrayList<Segment> first = new ArrayList<>();
+            first.add(segment);
+            node.getSegmentsByEntrance().put(segment.getStart(), first);
+        }
+        segmentsByEntrance = node.getSegmentsByEntrance().get(segment.getEnd());
+        if (!isNull(segmentsByEntrance)) segmentsByEntrance.add(segment);
+        else {
+            ArrayList<Segment> first = new ArrayList<>();
+            first.add(segment);
+            node.getSegmentsByEntrance().put(segment.getEnd(), first);
         }
     }
 
@@ -254,8 +244,9 @@ public class PathFindingPhase {
         }
     }
 
+    private QuadNode parent;
     private void parentPaths(QuadNode parent) {
-        //TODO: possible bottleneck
+        this.parent = parent;
         List<Point> parentPortals = parent.getPortals();
         pointCountTarget = parent.getPoints().size();
         ArrayList<QuadNode> children = new ArrayList<>(List.of(
@@ -271,13 +262,12 @@ public class PathFindingPhase {
                 bestLength = 0;
                 searchChildren(entrance, children);
             }
-
         }
     }
 
     private void searchChildren(Point stitch, ArrayList<QuadNode> unvisited) {
         for (QuadNode node : unvisited) {
-            if (!isNull(node.getTest().get(stitch))) {
+            if (!isNull(node.getSegmentsByEntrance().get(stitch))) {
                 iterateNodeSegments(stitch, unvisited, node);
             }
         }
@@ -286,18 +276,33 @@ public class PathFindingPhase {
     private void iterateNodeSegments(Point stitch, ArrayList<QuadNode> unvisited, QuadNode node) {
         ArrayList<QuadNode> updatedUnvisited = new ArrayList<>(unvisited);
         updatedUnvisited.remove(node);
-        for (Segment segment : node.getTest().get(stitch)) {
-            // Segment contains previous vertex
-            pointCount += node.getPoints().size();
-            singleSolution.add(segment);
-            currentLength += segment.getLength();
-            if (segment.getStart().equals(exit) || segment.getEnd().equals(exit)) {
+        if (!isNull(node.getSegmentsByEntrance().get(exit))) {
+            Segment segment = node.getSegment(exit, stitch);
+            if (!isNull(segment)) {
+                pointCount += node.getPoints().size();
+                singleSolution.add(segment);
+                currentLength += segment.getLength();
                 savePath(node);
-            } else if (updatedUnvisited.isEmpty() || (currentLength > bestLength && bestLength != 0)) {
-                backtrack(node);
-            } else {
-                searchChildren(segment.getStart().equals(stitch) ? segment.getEnd() : segment.getStart(), updatedUnvisited);
-                backtrack(node);
+            }
+        } else {
+            for (Segment segment : node.getSegmentsByEntrance().get(stitch)) {
+                // Segment contains previous vertex
+                pointCount += node.getPoints().size();
+                singleSolution.add(segment);
+                currentLength += segment.getLength();
+                Point end = segment.getStart().equals(stitch) ? segment.getEnd() : segment.getStart();
+                if (segment.getStart().equals(exit) || segment.getEnd().equals(exit)) {
+                    savePath(node);
+                } else if (
+                    updatedUnvisited.isEmpty() ||
+                    (currentLength > bestLength && bestLength != 0) ||
+                    this.parent.getPortals().contains(end)
+                ) {
+                    backtrack(node);
+                } else {
+                    searchChildren(end, updatedUnvisited);
+                    backtrack(node);
+                }
             }
         }
     }

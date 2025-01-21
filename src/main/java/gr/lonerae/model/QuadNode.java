@@ -15,7 +15,7 @@ public class QuadNode {
     private List<Point> portals = new ArrayList<>();
 
     private List<Segment> segments = new ArrayList<>();
-    private HashMap<Point, List<Segment>> test = new HashMap<>();
+    private HashMap<Point, List<Segment>> segmentsByEntrance = new HashMap<>();
 
     // Parent
     private QuadNode parent;
@@ -24,6 +24,13 @@ public class QuadNode {
     private QuadNode upperRight;
     private QuadNode lowerLeft;
     private QuadNode lowerRight;
+
+    public Segment getSegment(Point start, Point end) {
+        for (Segment segment : segmentsByEntrance.get(start)) {
+            if (segment.getStart().equals(end) || segment.getEnd().equals(end)) return segment;
+        }
+        return null;
+    }
 
     @Override
     public String toString() {
