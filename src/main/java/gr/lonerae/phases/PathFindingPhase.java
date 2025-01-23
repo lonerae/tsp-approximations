@@ -14,6 +14,7 @@ import static java.util.Objects.isNull;
 
 public class PathFindingPhase {
     private final double squareSize;
+    private final int townNumber;
 
     private Point entrance;
     private Point exit;
@@ -25,8 +26,9 @@ public class PathFindingPhase {
 
     private final List<QuadNode> iteratedNodes = new ArrayList<>();
 
-    public PathFindingPhase(double squareSize) {
+    public PathFindingPhase(double squareSize, int townNumber) {
         this.squareSize = squareSize;
+        this.townNumber = townNumber;
     }
 
     public void iterateNodes(QuadtreePhase quadtreePhaseInstance) {
@@ -54,7 +56,8 @@ public class PathFindingPhase {
         calculateTSP();
         if (!isNull(winner)) {
             synthesize(winner);
-            System.out.println("LENGTH: " + target);
+            System.out.println("TOWNS VISITED:" + test + "/" + townNumber);
+            System.out.println("LENGTH: " + actualTarget);
         }
     }
 
@@ -76,6 +79,7 @@ public class PathFindingPhase {
     }
 
     private double target = 0.0;
+    private double actualTarget = 0.0;
     private List<Segment> winner;
 
     private double constructTSP(Point entrance, Point stitch, List<QuadNode> unvisited) {
@@ -133,10 +137,17 @@ public class PathFindingPhase {
         }
     }
 
+    private Point previousTown = null;
+    private int test = 0;
     private void synthesize(List<Segment> tsp) {
         StringBuilder builder = new StringBuilder();
         int count = 1;
         builder.append(tsp.getFirst());
+        if (!isNull(tsp.getFirst().getTown())) {
+            System.out.println(tsp.getFirst().getTown().getOriginal());
+            previousTown = tsp.getFirst().getTown().getOriginal();
+            test++;
+        }
         Point current = tsp.getFirst().getEnd();
         int currentIndex = 0;
         while (count < tsp.size()) {
@@ -147,6 +158,7 @@ public class PathFindingPhase {
                         if (!isNull(tsp.get(i).getTown()) && !tsp.get(i).getTown().equals(tsp.get(i).getEnd())) {
                             builder.append(" -> ").append(tsp.get(i).getTown());
                         }
+                        addTownToSolution(tsp, i);
                         builder.append(" -> ").append(tsp.get(i).getEnd());
                         current = tsp.get(i).getEnd();
                         currentIndex = i;
@@ -156,6 +168,7 @@ public class PathFindingPhase {
                         if (!isNull(tsp.get(i).getTown()) && !tsp.get(i).getTown().equals(tsp.get(i).getStart())) {
                             builder.append(" -> ").append(tsp.get(i).getTown());
                         }
+                        addTownToSolution(tsp, i);
                         builder.append(" -> ").append(tsp.get(i).getStart());
                         current = tsp.get(i).getStart();
                         currentIndex = i;
@@ -166,7 +179,21 @@ public class PathFindingPhase {
                 i++;
             }
         }
-        System.out.println(builder);
+//        System.out.println(builder);
+    }
+
+    private void addTownToSolution(List<Segment> tsp, int i) {
+        if (!isNull(tsp.get(i).getTown())) {
+            System.out.println(tsp.get(i).getTown().getOriginal());
+            Point currentTown = tsp.get(i).getTown().getOriginal();
+            if (isNull(previousTown)) {
+                previousTown = currentTown;
+            } else {
+                actualTarget += SegmentUtils.getEuclideanDistance(previousTown, currentTown);
+                previousTown = currentTown;
+            }
+            test++;
+        }
     }
 
     private List<Segment> updateSegments() {

@@ -1,15 +1,17 @@
 package gr.lonerae.model;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 
 import java.util.Objects;
 
 @Data
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class Point {
-    private double x;
-    private double y;
+    @NonNull private double x;
+    @NonNull private double y;
+    private Point original = null;
 
     @Override
     public boolean equals(Object o) {
@@ -21,5 +23,10 @@ public class Point {
     @Override
     public int hashCode() {
         return Objects.hash(x, y);
+    }
+
+    @Override
+    public String toString() {
+        return "(" + x + "," + y + ")";
     }
 }

@@ -59,6 +59,7 @@ public class PreProcessingPhase {
     private void moveAndScaleBox() {
         // Move box to origin
         for (Point p : points) {
+            p.setOriginal(new Point(p.getX(), p.getY()));
             p.setX(CommonUtils.round(p.getX() - square.get(3).getX()));
             p.setY(CommonUtils.round(p.getY() - square.get(3).getY()));
         }

@@ -28,7 +28,7 @@ public class SegmentUtils {
         return getEuclideanDistance(segment.getStart(), point) + getEuclideanDistance(point, segment.getEnd());
     }
 
-    private static double getEuclideanDistance(Point start, Point end) {
+    public static double getEuclideanDistance(Point start, Point end) {
         return Math.sqrt(Math.pow(end.getX() - start.getX(), 2) + Math.pow(end.getY() - start.getY(), 2));
     }
 
