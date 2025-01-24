@@ -31,7 +31,7 @@ public class PathFindingPhase {
         this.townNumber = townNumber;
     }
 
-    public void iterateNodes(QuadtreePhase quadtreePhaseInstance) {
+    public double iterateNodes(QuadtreePhase quadtreePhaseInstance) {
         for (QuadNode node : quadtreePhaseInstance.getQuadNodes()) {
             calculateNodePaths(node);
             iteratedNodes.add(node);
@@ -58,7 +58,9 @@ public class PathFindingPhase {
             synthesize(winner);
             System.out.println("TOWNS VISITED:" + test + "/" + townNumber);
             System.out.println("LENGTH: " + actualTarget);
+            return actualTarget;
         }
+        return 0.0;
     }
 
     private final ArrayList<Segment> temp = new ArrayList<>();
@@ -144,7 +146,7 @@ public class PathFindingPhase {
         int count = 1;
         builder.append(tsp.getFirst());
         if (!isNull(tsp.getFirst().getTown())) {
-            System.out.println(tsp.getFirst().getTown().getOriginal());
+//            System.out.println(tsp.getFirst().getTown().getOriginal());
             previousTown = tsp.getFirst().getTown().getOriginal();
             test++;
         }
@@ -184,7 +186,7 @@ public class PathFindingPhase {
 
     private void addTownToSolution(List<Segment> tsp, int i) {
         if (!isNull(tsp.get(i).getTown())) {
-            System.out.println(tsp.get(i).getTown().getOriginal());
+//            System.out.println(tsp.get(i).getTown().getOriginal());
             Point currentTown = tsp.get(i).getTown().getOriginal();
             if (isNull(previousTown)) {
                 previousTown = currentTown;
