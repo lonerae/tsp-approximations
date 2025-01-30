@@ -1,85 +1,82 @@
 package gr.lonerae;
 
+import gr.lonerae.graphics.Plotter;
 import gr.lonerae.model.Point;
+import gr.lonerae.model.Solution;
 import gr.lonerae.phases.PathFindingPhase;
 import gr.lonerae.phases.PreProcessingPhase;
 import gr.lonerae.phases.QuadtreePhase;
 import gr.lonerae.utils.CommonUtils;
 import gr.lonerae.utils.FileUtils;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 import static java.util.Map.entry;
 
 public class Main {
-//    BASE TEST (kept for sentimental reasons)
-//    private static final List<Point> points = new ArrayList<>(List.of(
-//            new Point(1,3),
-//            new Point(2,5),
-//            new Point(-1,7),
-//            new Point(4,4),
-//            new Point(-3,6),
-//            new Point(8,-2),
-//            new Point(5,-5),
-//            new Point(1,7)
-//    ));
+    private static int maximumPortalsPerNodeSide = 1;
 
-    private static final int MAXIMUM_PORTALS_PER_NODE_SIDE = 1;
 
-    private static Map<String, Integer> instances = Map.ofEntries(
-            entry("/instances/a280.tsp", 2579),
-            entry("/instances/berlin52.tsp", 7542),
-            entry("/instances/bier127.tsp", 118282),
-            entry("/instances/ch130.tsp", 6110),
-            entry("/instances/ch150.tsp", 6528),
-            entry("/instances/dsj1000.tsp", 18659688),
-            entry("/instances/eil101.tsp", 629),
-            entry("/instances/kroA100.tsp", 21282),
-            entry("/instances/kroA150.tsp", 26524),
-            entry("/instances/kroA200.tsp", 29368),
-            entry("/instances/kroB100.tsp", 22141),
-            entry("/instances/kroB150.tsp", 26130),
-            entry("/instances/kroB200.tsp", 29437),
-            entry("/instances/kroD100.tsp", 21294),
-            entry("/instances/kroC100.tsp", 20749),
-            entry("/instances/kroE100.tsp", 22068),
-            entry("/instances/lin105.tsp", 14379),
-            entry("/instances/lin318.tsp", 42029),
-            entry("/instances/nrw1379.tsp", 56638),
-            entry("/instances/pr76.tsp", 108159),
-            entry("/instances/pr107.tsp", 44303),
-            entry("/instances/pr124.tsp", 59030),
-            entry("/instances/pr136.tsp", 96772),
-            entry("/instances/pr144.tsp", 58537),
-            entry("/instances/pr152.tsp", 73682),
-            entry("/instances/pr226.tsp", 80369),
-            entry("/instances/pr264.tsp", 49135),
-            entry("/instances/pr299.tsp", 48191),
-            entry("/instances/pr439.tsp", 107217),
-            entry("/instances/pr1002.tsp", 259045),
-            entry("/instances/rat99.tsp", 1211),
-            entry("/instances/rat195.tsp", 2323),
-            entry("/instances/rat575.tsp", 6773),
-            entry("/instances/rat783.tsp", 8806),
-            entry("/instances/st70.tsp", 675),
-            entry("/instances/ts225.tsp", 126643),
-            entry("/instances/tsp225.tsp", 3916),
-            entry("/instances/usa13509.tsp", 19982859)
+    private static final Map<String, Integer> solvedInstances = Map.ofEntries(
+//            entry("a280", 2579), //backstep
+//            entry("berlin52", 7542),
+//            entry("ch130", 6110),
+//            entry("ch150", 6528), //circle
+//            entry("eil101", 629), //visual issues
+//            entry("kroA100", 21282),
+//            entry("kroC100", 20749), //circle
+//            entry("kroD100", 21294),
+//            entry("lin105", 14379),
+//            entry("pr76", 108159),
+            entry("tsp225", 3916) //visual issues
+    );
+    private static final Map<String, Integer> otherInstances = Map.ofEntries(
+            entry("without_optimal_route/bier127", 118282),
+            entry("without_optimal_route/dsj1000", 18659688),
+            entry("without_optimal_route/kroA150", 26524),
+            entry("without_optimal_route/kroA200", 29368),
+            entry("without_optimal_route/kroB100", 22141),
+            entry("without_optimal_route/kroB150", 26130),
+            entry("without_optimal_route/kroB200", 29437),
+            entry("without_optimal_route/kroE100", 22068),
+            entry("without_optimal_route/lin318", 42029),
+            entry("without_optimal_route/nrw1379", 56638),
+            entry("without_optimal_route/pr107", 44303),
+            entry("without_optimal_route/pr124", 59030),
+            entry("without_optimal_route/pr136", 96772),
+            entry("without_optimal_route/pr144", 58537),
+            entry("without_optimal_route/pr152", 73682),
+            entry("without_optimal_route/pr226", 80369),
+            entry("without_optimal_route/pr264", 49135),
+            entry("without_optimal_route/pr299", 48191),
+            entry("without_optimal_route/pr439", 107217),
+            entry("without_optimal_route/pr1002", 259045),
+            entry("without_optimal_route/rat99", 1211),
+            entry("without_optimal_route/rat195", 2323),
+            entry("without_optimal_route/rat575", 6773),
+            entry("without_optimal_route/rat783", 8806),
+            entry("without_optimal_route/st70", 675),
+            entry("without_optimal_route/ts225", 126643),
+            entry("without_optimal_route/usa13509", 19982859)
     );
 
 
     public static void main(String[] args) {
-        for (Map.Entry<String,Integer> entry : instances.entrySet()) {
-            System.out.println("INSTANCE: " + entry.getKey());
-            List<Point> points = FileUtils.readInstance(entry.getKey());
+        for (String key : solvedInstances.keySet()) {
+            System.out.println("********************");
+            System.out.println("INSTANCE: " + key);
+            List<Point> points = FileUtils.readInstance(key);
+            List<Point> original = FileUtils.readInstance(key);
+            ArrayList<Integer> opt = FileUtils.readOptTour(key);
 
             PreProcessingPhase preProcessingPhaseInstance;
             preProcessingPhaseInstance = new PreProcessingPhase(points);
-            preProcessingPhaseInstance.preprocess();
+            double[] dimensions = preProcessingPhaseInstance.preprocess();
 
-            double res;
-            for (int portalsPerNodeSide = 1; portalsPerNodeSide <= MAXIMUM_PORTALS_PER_NODE_SIDE; portalsPerNodeSide++) {
-                System.out.println("********************");
+            Solution res;
+            for (int portalsPerNodeSide = 1; portalsPerNodeSide <= maximumPortalsPerNodeSide; portalsPerNodeSide++) {
                 System.out.println("PORTALS: " + portalsPerNodeSide + "\n");
 
                 QuadtreePhase quadtreePhaseInstance;
@@ -90,9 +87,17 @@ public class Main {
 
                 pathFindingPhase = new PathFindingPhase(preProcessingPhaseInstance.getSquareSide(), points.size());
                 res = pathFindingPhase.iterateNodes(quadtreePhaseInstance);
-                double optimal = entry.getValue();
+                double optimal = solvedInstances.get(key);
                 System.out.println("OPTIMAL: " + optimal);
-                System.out.println("PERFORMANCE: " + -1 * CommonUtils.round((res - optimal)/optimal) * 100 + "%");
+                System.out.println("PERFORMANCE: " + -1 * CommonUtils.round((res.getLength() - optimal)/optimal) * 100 + "%");
+
+                Plotter.PlotSolution plotSolution = new Plotter.PlotSolution(res.getSequence(), dimensions);
+                plotSolution.setVisible(true);
+                plotSolution.setTitle(key);
+
+                Plotter.PlotOptimal plotOptimal = new Plotter.PlotOptimal(original, opt, dimensions);
+                plotOptimal.setVisible(true);
+                plotOptimal.setTitle(key + " optimal");
             }
         }
     }

@@ -1,9 +1,6 @@
 package gr.lonerae.phases;
 
-import gr.lonerae.model.Path;
-import gr.lonerae.model.Point;
-import gr.lonerae.model.QuadNode;
-import gr.lonerae.model.Segment;
+import gr.lonerae.model.*;
 import gr.lonerae.utils.QuadTreeUtils;
 import gr.lonerae.utils.SegmentUtils;
 
@@ -26,12 +23,14 @@ public class PathFindingPhase {
 
     private final List<QuadNode> iteratedNodes = new ArrayList<>();
 
+    private final ArrayList<Point> points = new ArrayList<>();
+
     public PathFindingPhase(double squareSize, int townNumber) {
         this.squareSize = squareSize;
         this.townNumber = townNumber;
     }
 
-    public double iterateNodes(QuadtreePhase quadtreePhaseInstance) {
+    public Solution iterateNodes(QuadtreePhase quadtreePhaseInstance) {
         for (QuadNode node : quadtreePhaseInstance.getQuadNodes()) {
             calculateNodePaths(node);
             iteratedNodes.add(node);
@@ -58,9 +57,9 @@ public class PathFindingPhase {
             synthesize(winner);
             System.out.println("TOWNS VISITED:" + test + "/" + townNumber);
             System.out.println("LENGTH: " + actualTarget);
-            return actualTarget;
+            return new Solution(actualTarget, points);
         }
-        return 0.0;
+        return null;
     }
 
     private final ArrayList<Segment> temp = new ArrayList<>();
@@ -146,7 +145,7 @@ public class PathFindingPhase {
         int count = 1;
         builder.append(tsp.getFirst());
         if (!isNull(tsp.getFirst().getTown())) {
-//            System.out.println(tsp.getFirst().getTown().getOriginal());
+            points.add(tsp.getFirst().getTown().getOriginal());
             previousTown = tsp.getFirst().getTown().getOriginal();
             test++;
         }
@@ -181,12 +180,11 @@ public class PathFindingPhase {
                 i++;
             }
         }
-//        System.out.println(builder);
     }
 
     private void addTownToSolution(List<Segment> tsp, int i) {
         if (!isNull(tsp.get(i).getTown())) {
-//            System.out.println(tsp.get(i).getTown().getOriginal());
+            points.add(tsp.get(i).getTown().getOriginal());
             Point currentTown = tsp.get(i).getTown().getOriginal();
             if (isNull(previousTown)) {
                 previousTown = currentTown;

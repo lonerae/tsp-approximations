@@ -15,6 +15,7 @@ public class PreProcessingPhase {
     private final Map<Integer, Point> square = new HashMap<>();
     private double squareSide = 0;
 
+    // TODO: higher E => loss of towns
     private static final int E = 1;
 
     public PreProcessingPhase(List<Point> points) {
@@ -22,13 +23,14 @@ public class PreProcessingPhase {
         this.size = points.size();
     }
 
-    public void preprocess() {
-        this.createBoundingBox();
+    public double[] preprocess() {
+        double[] dimensions = this.createBoundingBox();
         this.moveAndScaleBox();
         this.snapToGrid();
+        return dimensions;
     }
 
-    private void createBoundingBox() {
+    private double[] createBoundingBox() {
         Point minX = points.getFirst();
         Point maxX = points.getFirst();
         Point minY = points.getFirst();
@@ -54,6 +56,11 @@ public class PreProcessingPhase {
             square.put(3, new Point(minX.getX(), minY.getY()));
             squareSide = maxDistanceY;
         }
+
+        double[] dimensions = new double[2];
+        dimensions[0] = maxDistanceX;
+        dimensions[1] = maxDistanceY;
+        return dimensions;
     }
 
     private void moveAndScaleBox() {
