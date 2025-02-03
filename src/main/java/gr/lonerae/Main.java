@@ -9,6 +9,7 @@ import gr.lonerae.phases.QuadtreePhase;
 import gr.lonerae.utils.CommonUtils;
 import gr.lonerae.utils.FileUtils;
 
+import javax.swing.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -20,7 +21,7 @@ public class Main {
 
 
     private static final Map<String, Integer> solvedInstances = Map.ofEntries(
-//            entry("a280", 2579), //backstep
+            entry("a280", 2579) //backstep
 //            entry("berlin52", 7542),
 //            entry("ch130", 6110),
 //            entry("ch150", 6528), //circle
@@ -30,7 +31,7 @@ public class Main {
 //            entry("kroD100", 21294),
 //            entry("lin105", 14379),
 //            entry("pr76", 108159),
-            entry("tsp225", 3916) //visual issues
+//            entry("tsp225", 3916) //visual issues
     );
     private static final Map<String, Integer> otherInstances = Map.ofEntries(
             entry("without_optimal_route/bier127", 118282),
@@ -89,9 +90,10 @@ public class Main {
                 res = pathFindingPhase.iterateNodes(quadtreePhaseInstance);
                 double optimal = solvedInstances.get(key);
                 System.out.println("OPTIMAL: " + optimal);
-                System.out.println("PERFORMANCE: " + -1 * CommonUtils.round((res.getLength() - optimal)/optimal) * 100 + "%");
+                System.out.println("PERFORMANCE: " + -1 * CommonUtils.round((res.getLength() - optimal) * 100 /optimal)+ "%");
 
                 Plotter.PlotSolution plotSolution = new Plotter.PlotSolution(res.getSequence(), dimensions);
+                plotSolution.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
                 plotSolution.setVisible(true);
                 plotSolution.setTitle(key);
 

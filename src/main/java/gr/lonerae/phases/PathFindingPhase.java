@@ -5,6 +5,7 @@ import gr.lonerae.utils.QuadTreeUtils;
 import gr.lonerae.utils.SegmentUtils;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static java.util.Objects.isNull;
@@ -56,6 +57,9 @@ public class PathFindingPhase {
         if (!isNull(winner)) {
             synthesize(winner);
             System.out.println("TOWNS VISITED:" + test + "/" + townNumber);
+            double actualTarget = solutionSegments.stream()
+                    .map(segment -> SegmentUtils.getEuclideanDistance(segment.getStart(), segment.getEnd()))
+                    .reduce(0.0, Double::sum);
             System.out.println("LENGTH: " + actualTarget);
             return new Solution(actualTarget, points);
         }
@@ -80,7 +84,6 @@ public class PathFindingPhase {
     }
 
     private double target = 0.0;
-    private double actualTarget = 0.0;
     private List<Segment> winner;
 
     private double constructTSP(Point entrance, Point stitch, List<QuadNode> unvisited) {
@@ -138,15 +141,11 @@ public class PathFindingPhase {
         }
     }
 
-    private Point previousTown = null;
     private int test = 0;
     private void synthesize(List<Segment> tsp) {
-        StringBuilder builder = new StringBuilder();
         int count = 1;
-        builder.append(tsp.getFirst());
         if (!isNull(tsp.getFirst().getTown())) {
             points.add(tsp.getFirst().getTown().getOriginal());
-            previousTown = tsp.getFirst().getTown().getOriginal();
             test++;
         }
         Point current = tsp.getFirst().getEnd();
@@ -156,21 +155,13 @@ public class PathFindingPhase {
             while (i < tsp.size()) {
                 if (i != currentIndex) {
                     if (tsp.get(i).getStart().equals(current)) {
-                        if (!isNull(tsp.get(i).getTown()) && !tsp.get(i).getTown().equals(tsp.get(i).getEnd())) {
-                            builder.append(" -> ").append(tsp.get(i).getTown());
-                        }
                         addTownToSolution(tsp, i);
-                        builder.append(" -> ").append(tsp.get(i).getEnd());
                         current = tsp.get(i).getEnd();
                         currentIndex = i;
                         count++;
                         break;
                     } else if (tsp.get(i).getEnd().equals(current)) {
-                        if (!isNull(tsp.get(i).getTown()) && !tsp.get(i).getTown().equals(tsp.get(i).getStart())) {
-                            builder.append(" -> ").append(tsp.get(i).getTown());
-                        }
                         addTownToSolution(tsp, i);
-                        builder.append(" -> ").append(tsp.get(i).getStart());
                         current = tsp.get(i).getStart();
                         currentIndex = i;
                         count++;
@@ -180,26 +171,99 @@ public class PathFindingPhase {
                 i++;
             }
         }
+        addOnLinePoints();
     }
 
+    private Point lead = null;
+    private Segment currentSegment = null;
+    private ArrayList<Segment> solutionSegments = new ArrayList<>();
+    private ArrayList<Point> onLinePoints = new ArrayList<>();
     private void addTownToSolution(List<Segment> tsp, int i) {
         if (!isNull(tsp.get(i).getTown())) {
-            points.add(tsp.get(i).getTown().getOriginal());
-            Point currentTown = tsp.get(i).getTown().getOriginal();
-            if (isNull(previousTown)) {
-                previousTown = currentTown;
+            if (points.size() > 1 && isNull(currentSegment)) currentSegment = new Segment(points.get(points.size() - 2), points.getLast(), false);
+            Point candidate = tsp.get(i).getTown().getOriginal();
+            if (!isNull(currentSegment) && !candidate.equals(currentSegment.getEnd()) && SegmentUtils.onLine(currentSegment, candidate)) {
+                if (onLinePoints.isEmpty()) {
+                    onLinePoints.add(currentSegment.getStart());
+                    points.remove(currentSegment.getStart());
+                    onLinePoints.add(currentSegment.getEnd());
+                    points.remove(currentSegment.getEnd());
+                    if (!solutionSegments.isEmpty()) {
+                        solutionSegments.removeLast();
+                        test -= 2;
+                    }
+                }
+                if (!points.isEmpty()) lead = points.getLast();
+                onLinePoints.add(candidate);
             } else {
-                actualTarget += SegmentUtils.getEuclideanDistance(previousTown, currentTown);
-                previousTown = currentTown;
+                addOnLinePoints();
+                currentSegment = null;
+                Segment candidateSegment = new Segment(points.getLast(), candidate, false);
+                ArrayList<Integer> toBeDeleted = new ArrayList<>();
+                ArrayList<Segment> toBeReplaced = new ArrayList<>();
+                int replaceIndex = 0;
+                for (Segment segment : solutionSegments) {
+                    if (SegmentUtils.segmentIntersect(candidateSegment, segment)) {
+                        int index1 = points.indexOf(segment.getEnd());
+                        int index2 = points.indexOf(candidateSegment.getStart());
+                        points.set(index1, candidateSegment.getStart());
+                        points.set(index2, segment.getEnd());
+                        toBeDeleted.add(solutionSegments.indexOf(segment));
+                        toBeReplaced.add(new Segment(segment.getStart(),candidateSegment.getStart(), false));
+                    }
+                }
+                for (Integer index : toBeDeleted) {
+                    solutionSegments.add(new Segment(solutionSegments.get(index).getEnd(),candidateSegment.getEnd(), false));
+                    solutionSegments.set(index, toBeReplaced.get(replaceIndex));
+                    replaceIndex++;
+                }
+                if (toBeDeleted.isEmpty() && !points.isEmpty()) solutionSegments.add(candidateSegment);
+                points.add(candidate);
+                test++;
             }
-            test++;
         }
+    }
+
+    private void addOnLinePoints() {
+        if (!onLinePoints.isEmpty()) {
+            onLinePoints.sort(this::compare);
+            Boolean intersectFirst = null;
+            Boolean intersectSecond = null;
+            if (!isNull(lead)) {
+                intersectFirst = solutionSegments.stream().anyMatch(segment -> SegmentUtils.segmentIntersect(segment, new Segment(onLinePoints.getFirst(), lead, false)));
+                intersectSecond = solutionSegments.stream().anyMatch(segment -> SegmentUtils.segmentIntersect(segment, new Segment(onLinePoints.getLast(), lead, false)));
+            }
+            if (
+                    (!isNull(intersectFirst) && Boolean.TRUE.equals(intersectFirst)) ||
+                    (
+                        !isNull(lead) && Boolean.FALSE.equals(intersectSecond) &&
+                        SegmentUtils.getEuclideanDistance(onLinePoints.getLast(), lead) < SegmentUtils.getEuclideanDistance(onLinePoints.getFirst(), lead)
+                    )
+            ) {
+                Collections.reverse(onLinePoints);
+            }
+            for (int i = 0; i < onLinePoints.size() - 1; i++) {
+                if (!points.isEmpty()) {
+                    solutionSegments.add(new Segment(onLinePoints.get(i), onLinePoints.get(i+1), false));
+                }
+                points.add(onLinePoints.get(i));
+            }
+            points.add(onLinePoints.getLast());
+            test += onLinePoints.size();
+            onLinePoints.clear();
+        }
+    }
+
+    private int compare(Point p1, Point p2) {
+        int result = Double.compare(p1.getX(), p2.getX());
+        if (result==0) result = Double.compare(p1.getY(), p2.getY());
+        return result;
     }
 
     private List<Segment> updateSegments() {
         List<Segment> segments = new ArrayList<>();
         for (Path path : solutions) {
-            Segment newSegment = new Segment(path.getEntrance(), path.getExit());
+            Segment newSegment = new Segment(path.getEntrance(), path.getExit(), true);
             newSegment.setLength(path.getLength());
             dive(path, newSegment);
             boolean distinct = true;
@@ -234,7 +298,7 @@ public class PathFindingPhase {
     private void calculateNodePaths(QuadNode node) {
         for (int i = 0; i < node.getPortals().size() - 1; i++) {
             for (int j = i + 1; j < node.getPortals().size(); j++) {
-                Segment segment = new Segment(node.getPortals().get(i), node.getPortals().get(j));
+                Segment segment = new Segment(node.getPortals().get(i), node.getPortals().get(j), true);
                 if (node.getPoints().size() == 1) {
                     segment.setLength(SegmentUtils.getPathLengthThroughPoint(segment, node.getPoints().getFirst()));
                     segment.setTown(node.getPoints().getFirst());

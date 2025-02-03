@@ -16,10 +16,15 @@ public class Segment {
     private List<Path> inner = new ArrayList<>();
     private Point town;
 
-    public Segment(Point start, Point end) {
-        boolean valid = start.getX() <= end.getX();
-        this.start = valid ? start : end;
-        this.end = valid ? end : start;
+    public Segment(Point start, Point end, boolean ordered) {
+        if (ordered) {
+            boolean valid = start.getX() <= end.getX();
+            this.start = valid ? start : end;
+            this.end = valid ? end : start;
+        } else {
+            this.start = start;
+            this.end = end;
+        }
     }
 
     @Override

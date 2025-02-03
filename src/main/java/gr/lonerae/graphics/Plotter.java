@@ -36,7 +36,8 @@ public class Plotter {
                 g.setColor(Color.BLACK);
                 g.draw(new Line2D.Double(points.get(i).getX(), points.get(i).getY() + headerHeight,
                         points.get(i+1).getX(), points.get(i+1).getY() + headerHeight));
-                g.setColor(Color.RED);
+                if (i == 0) g.setColor(Color.BLUE);
+                else g.setColor(Color.RED);
                 Ellipse2D.Double town = new Ellipse2D.Double(points.get(i).getX() - r/2, points.get(i).getY() + headerHeight - r/2, r, r);
                 g.fill(town);
                 town = new Ellipse2D.Double(points.get(i+1).getX() - r/2, points.get(i+1).getY() + headerHeight - r/2, r, r);
