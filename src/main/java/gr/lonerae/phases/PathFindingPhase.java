@@ -3,6 +3,9 @@ package gr.lonerae.phases;
 import gr.lonerae.model.*;
 import gr.lonerae.utils.QuadTreeUtils;
 import gr.lonerae.utils.SegmentUtils;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -11,6 +14,8 @@ import java.util.List;
 import static java.util.Objects.isNull;
 
 public class PathFindingPhase {
+    private static final Logger LOGGER = LogManager.getLogger();
+
     private final double squareSize;
     private final int townNumber;
 
@@ -36,31 +41,31 @@ public class PathFindingPhase {
             calculateNodePaths(node);
             iteratedNodes.add(node);
             calculateParentPortals(node.getParent(), node.getPortals());
-            QuadNode parent = node.getParent();
-            parent.setTraversed(parent.getTraversed() + 1);
-            while (!isNull(parent) && parent.getTraversed() == 4) {
-                parentPaths(parent);
+            QuadNode currentParent = node.getParent();
+            currentParent.setTraversed(currentParent.getTraversed() + 1);
+            while (!isNull(currentParent) && currentParent.getTraversed() == 4) {
+                parentPaths(currentParent);
                 List<Segment> segTest = updateSegments();
-                parent.setSegments(segTest);
+                currentParent.setSegments(segTest);
                 for (Segment s : segTest) {
-                    updateSegments(parent, s);
+                    updateSegments(currentParent, s);
                 }
-                iteratedNodes.add(parent);
-                if (!isNull(parent.getParent())) {
-                    calculateParentPortals(parent.getParent(), parent.getPortals());
-                    parent.getParent().setTraversed(parent.getParent().getTraversed() + 1);
+                iteratedNodes.add(currentParent);
+                if (!isNull(currentParent.getParent())) {
+                    calculateParentPortals(currentParent.getParent(), currentParent.getPortals());
+                    currentParent.getParent().setTraversed(currentParent.getParent().getTraversed() + 1);
                 }
-                parent = parent.getParent();
+                currentParent = currentParent.getParent();
             }
         }
         calculateTSP();
         if (!isNull(winner)) {
             synthesize(winner);
-            System.out.println("TOWNS VISITED:" + test + "/" + townNumber);
+            LOGGER.log(Level.INFO,"TOWNS VISITED: {}/{}", test , townNumber);
             double actualTarget = solutionSegments.stream()
                     .map(segment -> SegmentUtils.euclideanDistance(segment.getStart(), segment.getEnd()))
                     .reduce(0.0, Double::sum);
-            System.out.println("LENGTH: " + actualTarget);
+            LOGGER.log(Level.INFO,"LENGTH: {}", actualTarget);
             return new Solution(actualTarget, points);
         }
         return null;
