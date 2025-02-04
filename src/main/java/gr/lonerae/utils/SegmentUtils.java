@@ -11,7 +11,7 @@ import static java.util.Objects.isNull;
 public class SegmentUtils {
     private SegmentUtils() {}
 
-    public static boolean segmentIntersect(Segment s1, Segment s2) {
+    public static boolean intersect(Segment s1, Segment s2) {
         Double l1 = null;
         if (s1.getEnd().getX() != s1.getStart().getX()) {
             l1 = (s1.getEnd().getY() - s1.getStart().getY()) / (s1.getEnd().getX() - s1.getStart().getX());
@@ -20,7 +20,7 @@ public class SegmentUtils {
         if (s2.getEnd().getX() != s2.getStart().getX()) {
             l2 = (s2.getEnd().getY() - s2.getStart().getY()) / (s2.getEnd().getX() - s2.getStart().getX());
         }
-        if ((!isNull(l1) && !isNull(l2) && l1.equals(l2)) || (isNull(l1) && isNull(l2))) return false;
+        if ((!isNull(l1) && !isNull(l2) && (Double.compare(l1, l2) == 0 || l1.doubleValue() == l2.doubleValue())) || (isNull(l1) && isNull(l2))) return false;
         Point intersection = null;
         if (!isNull(l1) && !isNull(l2)) {
             double b1 = s1.getStart().getY() - l1 * s1.getStart().getX();
@@ -34,29 +34,20 @@ public class SegmentUtils {
             double b1 = s1.getStart().getY() - l1 * s1.getStart().getX();
             intersection = new Point(s2.getStart().getX(), l1*s2.getStart().getX()+b1);
         }
-        return inSegment(s1, intersection) && inSegment(s2, intersection);
-    }
-    public static boolean segmentOverlap(Segment s1, Segment s2) {
-        Double l1 = null;
-        if (s1.getEnd().getX() != s1.getStart().getX()) {
-            l1 = (s1.getEnd().getY() - s1.getStart().getY()) / (s1.getEnd().getX() - s1.getStart().getX());
-        }
-        Double l2 = null;
-        if (s2.getEnd().getX() != s2.getStart().getX()) {
-            l2 = (s2.getEnd().getY() - s2.getStart().getY()) / (s2.getEnd().getX() - s2.getStart().getX());
-        }
-        if ((!isNull(l1) && !isNull(l2) && l1.equals(l2)) || (isNull(l1) && !isNull(l2)) || (isNull(l2) && !isNull(l1))) return false;
-        Segment small = getEuclideanDistance(s1.getStart(), s1.getEnd()) < getEuclideanDistance(s2.getStart(), s2.getEnd()) ?
-                s1 : s2;
-        Segment large = small.equals(s1) ? s2 : s1;
-        return pointWithinSegment(small.getStart(), large) || pointWithinSegment(small.getEnd(), large);
+        return pointInSegment(s1, intersection) && pointInSegment(s2, intersection);
     }
 
-    private static boolean pointWithinSegment(Point point, Segment large) {
-        return
-            point.getX() >= Math.min(large.getStart().getX(), large.getEnd().getX()) && point.getX() <= Math.max(large.getStart().getX(), large.getEnd().getX()) &&
-            point.getY() >= Math.min(large.getStart().getY(), large.getEnd().getY()) && point.getY() <= Math.max(large.getStart().getY(), large.getEnd().getY()) &&
-            !point.equals(large.getStart()) && !point.equals(large.getEnd());
+    public static boolean dominate(Segment parent, Segment child) {
+        Double l1 = null;
+        if (parent.getEnd().getX() != parent.getStart().getX()) {
+            l1 = (parent.getEnd().getY() - parent.getStart().getY()) / (parent.getEnd().getX() - parent.getStart().getX());
+        }
+        Double l2 = null;
+        if (child.getEnd().getX() != child.getStart().getX()) {
+            l2 = (child.getEnd().getY() - child.getStart().getY()) / (child.getEnd().getX() - child.getStart().getX());
+        }
+        if ((!isNull(l1) && !isNull(l2) && !l1.equals(l2)) || (isNull(l1) && !isNull(l2)) || (isNull(l2) && !isNull(l1))) return false;
+        return segmentInSegment(parent, child);
     }
 
     public static boolean onLine(Segment s, Point p) {
@@ -72,9 +63,16 @@ public class SegmentUtils {
         }
     }
 
-    public static boolean inSegment(Segment segment, Point point) {
+    public static boolean segmentInSegment(Segment parent, Segment child) {
+        return
+                euclideanDistance(parent.getStart(), child.getStart()) + euclideanDistance(child.getStart(), child.getEnd()) + euclideanDistance(child.getEnd(), parent.getEnd()) == euclideanDistance(parent.getStart(), parent.getEnd()) ||
+                euclideanDistance(parent.getStart(), child.getEnd()) + euclideanDistance(child.getStart(), child.getEnd()) + euclideanDistance(child.getStart(), parent.getEnd()) == euclideanDistance(parent.getStart(), parent.getEnd());
+    }
+
+    public static boolean pointInSegment(Segment segment, Point point) {
         return !point.equals(segment.getStart()) && !point.equals(segment.getEnd()) &&
-               getEuclideanDistance(segment.getStart(), point) + getEuclideanDistance(point, segment.getEnd()) == getPathLength(segment);
+                point.getX() >= Math.min(segment.getStart().getX(), segment.getEnd().getX()) && point.getX() <= Math.max(segment.getStart().getX(), segment.getEnd().getX()) &&
+                point.getY() >= Math.min(segment.getStart().getY(), segment.getEnd().getY()) && point.getY() <= Math.max(segment.getStart().getY(), segment.getEnd().getY());
     }
 
     public static Point contains(Segment segment, Point point) {
@@ -89,14 +87,14 @@ public class SegmentUtils {
     }
 
     public static double getPathLength(Segment segment) {
-        return getEuclideanDistance(segment.getStart(), segment.getEnd());
+        return euclideanDistance(segment.getStart(), segment.getEnd());
     }
 
     public static double getPathLengthThroughPoint(Segment segment, Point point) {
-        return getEuclideanDistance(segment.getStart(), point) + getEuclideanDistance(point, segment.getEnd());
+        return euclideanDistance(segment.getStart(), point) + euclideanDistance(point, segment.getEnd());
     }
 
-    public static double getEuclideanDistance(Point start, Point end) {
+    public static double euclideanDistance(Point start, Point end) {
         return Math.sqrt(Math.pow(end.getX() - start.getX(), 2) + Math.pow(end.getY() - start.getY(), 2));
     }
 

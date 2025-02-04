@@ -58,7 +58,7 @@ public class PathFindingPhase {
             synthesize(winner);
             System.out.println("TOWNS VISITED:" + test + "/" + townNumber);
             double actualTarget = solutionSegments.stream()
-                    .map(segment -> SegmentUtils.getEuclideanDistance(segment.getStart(), segment.getEnd()))
+                    .map(segment -> SegmentUtils.euclideanDistance(segment.getStart(), segment.getEnd()))
                     .reduce(0.0, Double::sum);
             System.out.println("LENGTH: " + actualTarget);
             return new Solution(actualTarget, points);
@@ -183,45 +183,36 @@ public class PathFindingPhase {
             if (points.size() > 1 && isNull(currentSegment)) currentSegment = new Segment(points.get(points.size() - 2), points.getLast(), false);
             Point candidate = tsp.get(i).getTown().getOriginal();
             if (!isNull(currentSegment) && !candidate.equals(currentSegment.getEnd()) && SegmentUtils.onLine(currentSegment, candidate)) {
-                if (onLinePoints.isEmpty()) {
-                    onLinePoints.add(currentSegment.getStart());
-                    points.remove(currentSegment.getStart());
-                    onLinePoints.add(currentSegment.getEnd());
-                    points.remove(currentSegment.getEnd());
-                    if (!solutionSegments.isEmpty()) {
-                        solutionSegments.removeLast();
-                        test -= 2;
-                    }
-                }
-                if (!points.isEmpty()) lead = points.getLast();
-                onLinePoints.add(candidate);
+                updateOnLinePoints(candidate);
             } else {
                 addOnLinePoints();
                 currentSegment = null;
-                Segment candidateSegment = new Segment(points.getLast(), candidate, false);
-                ArrayList<Integer> toBeDeleted = new ArrayList<>();
-                ArrayList<Segment> toBeReplaced = new ArrayList<>();
-                int replaceIndex = 0;
-                for (Segment segment : solutionSegments) {
-                    if (SegmentUtils.segmentIntersect(candidateSegment, segment)) {
-                        int index1 = points.indexOf(segment.getEnd());
-                        int index2 = points.indexOf(candidateSegment.getStart());
-                        points.set(index1, candidateSegment.getStart());
-                        points.set(index2, segment.getEnd());
-                        toBeDeleted.add(solutionSegments.indexOf(segment));
-                        toBeReplaced.add(new Segment(segment.getStart(),candidateSegment.getStart(), false));
-                    }
+                if (!points.isEmpty()) {
+                    Segment candidateSegment = new Segment(points.getLast(), candidate, false);
+                    postProcessing(candidateSegment);
                 }
-                for (Integer index : toBeDeleted) {
-                    solutionSegments.add(new Segment(solutionSegments.get(index).getEnd(),candidateSegment.getEnd(), false));
-                    solutionSegments.set(index, toBeReplaced.get(replaceIndex));
-                    replaceIndex++;
-                }
-                if (toBeDeleted.isEmpty() && !points.isEmpty()) solutionSegments.add(candidateSegment);
                 points.add(candidate);
                 test++;
             }
         }
+    }
+
+    private void updateOnLinePoints(Point candidate) {
+        if (onLinePoints.isEmpty()) {
+            onLinePoints.add(currentSegment.getStart());
+            points.remove(currentSegment.getStart());
+            onLinePoints.add(currentSegment.getEnd());
+            points.remove(currentSegment.getEnd());
+            if (!solutionSegments.isEmpty()) {
+                solutionSegments.removeLast();
+                if (!solutionSegments.isEmpty()) {
+                    solutionSegments.removeLast();
+                }
+                test -= 2;
+            }
+        }
+        if (!points.isEmpty()) lead = points.getLast();
+        onLinePoints.add(candidate);
     }
 
     private void addOnLinePoints() {
@@ -230,28 +221,83 @@ public class PathFindingPhase {
             Boolean intersectFirst = null;
             Boolean intersectSecond = null;
             if (!isNull(lead)) {
-                intersectFirst = solutionSegments.stream().anyMatch(segment -> SegmentUtils.segmentIntersect(segment, new Segment(onLinePoints.getFirst(), lead, false)));
-                intersectSecond = solutionSegments.stream().anyMatch(segment -> SegmentUtils.segmentIntersect(segment, new Segment(onLinePoints.getLast(), lead, false)));
+                intersectFirst = solutionSegments.stream().anyMatch(segment -> SegmentUtils.intersect(segment, new Segment(onLinePoints.getFirst(), lead, false)));
+                intersectSecond = solutionSegments.stream().anyMatch(segment -> SegmentUtils.intersect(segment, new Segment(onLinePoints.getLast(), lead, false)));
             }
             if (
                     (!isNull(intersectFirst) && Boolean.TRUE.equals(intersectFirst)) ||
                     (
                         !isNull(lead) && Boolean.FALSE.equals(intersectSecond) &&
-                        SegmentUtils.getEuclideanDistance(onLinePoints.getLast(), lead) < SegmentUtils.getEuclideanDistance(onLinePoints.getFirst(), lead)
+                        SegmentUtils.euclideanDistance(onLinePoints.getLast(), lead) < SegmentUtils.euclideanDistance(onLinePoints.getFirst(), lead)
                     )
             ) {
                 Collections.reverse(onLinePoints);
             }
+            if (!points.isEmpty()) {
+                Segment candidateSegment = new Segment(points.getLast(), onLinePoints.get(0), false);
+                postProcessing(candidateSegment);
+            }
             for (int i = 0; i < onLinePoints.size() - 1; i++) {
-                if (!points.isEmpty()) {
-                    solutionSegments.add(new Segment(onLinePoints.get(i), onLinePoints.get(i+1), false));
-                }
+                Segment candidateSegment = new Segment(onLinePoints.get(i), onLinePoints.get(i+1), false);
+                postProcessing(candidateSegment);
                 points.add(onLinePoints.get(i));
             }
             points.add(onLinePoints.getLast());
             test += onLinePoints.size();
             onLinePoints.clear();
         }
+    }
+
+    private void postProcessing(Segment candidateSegment) {
+        ArrayList<Integer> toBeDeleted = new ArrayList<>();
+        ArrayList<Segment> toBeReplaced = new ArrayList<>();
+        ArrayList<Integer> toBeDominated = new ArrayList<>();
+        ArrayList<Segment> toBeAdded = new ArrayList<>();
+        int replaceIndex = 0;
+        int dominated = 0;
+        for (Segment segment : solutionSegments) {
+            if (SegmentUtils.dominate(candidateSegment, segment)) {
+                dominated += 1;
+                points.remove(segment.getStart());
+                points.remove(segment.getEnd());
+                toBeDominated.add(solutionSegments.indexOf(segment));
+                if (SegmentUtils.euclideanDistance(candidateSegment.getStart(),segment.getStart()) < SegmentUtils.euclideanDistance(candidateSegment.getStart(), segment.getEnd())) {
+                    points.add(segment.getStart());
+                    points.add(segment.getEnd());
+                    toBeAdded.add(new Segment(candidateSegment.getStart(), segment.getStart(), false));
+                    toBeAdded.add(new Segment(segment.getStart(), segment.getEnd(), false));
+                    toBeAdded.add(new Segment(segment.getEnd(), candidateSegment.getEnd(), false));
+                } else {
+                    points.add(segment.getEnd());
+                    points.add(segment.getStart());
+                    toBeAdded.add(new Segment(candidateSegment.getStart(), segment.getEnd(), false));
+                    toBeAdded.add(new Segment(segment.getEnd(), segment.getStart(), false));
+                    toBeAdded.add(new Segment(segment.getStart(), candidateSegment.getEnd(), false));
+                }
+            } else if (SegmentUtils.intersect(candidateSegment, segment)) {
+                int index1 = points.indexOf(segment.getEnd());
+                int index2 = points.indexOf(candidateSegment.getStart());
+                if (index1 > -1 && index2 > -1) {
+                    points.set(index1, candidateSegment.getStart());
+                    points.set(index2, segment.getEnd());
+                    toBeDeleted.add(solutionSegments.indexOf(segment));
+                    toBeReplaced.add(new Segment(segment.getStart(), candidateSegment.getStart(), false));
+                }
+            }
+        }
+        for (Integer index : toBeDominated) {
+            Segment segment = solutionSegments.get(index);
+            if (solutionSegments.get(index+1).getStart().equals(segment.getEnd())) solutionSegments.remove(index+1);
+            solutionSegments.remove(index);
+            if (solutionSegments.get(index-1).getEnd().equals(segment.getStart())) solutionSegments.remove(index-1);
+        }
+        for (Integer index : toBeDeleted) {
+            solutionSegments.add(new Segment(solutionSegments.get(index).getEnd(), candidateSegment.getEnd(), false));
+            solutionSegments.set(index, toBeReplaced.get(replaceIndex));
+            replaceIndex++;
+        }
+        solutionSegments.addAll(toBeAdded);
+        if (toBeDeleted.isEmpty() && dominated == 0 && !points.isEmpty()) solutionSegments.add(candidateSegment);
     }
 
     private int compare(Point p1, Point p2) {

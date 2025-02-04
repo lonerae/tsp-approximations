@@ -21,17 +21,17 @@ public class Main {
 
 
     private static final Map<String, Integer> solvedInstances = Map.ofEntries(
-            entry("a280", 2579) //backstep
-//            entry("berlin52", 7542),
-//            entry("ch130", 6110),
-//            entry("ch150", 6528), //circle
-//            entry("eil101", 629), //visual issues
-//            entry("kroA100", 21282),
-//            entry("kroC100", 20749), //circle
-//            entry("kroD100", 21294),
-//            entry("lin105", 14379),
-//            entry("pr76", 108159),
-//            entry("tsp225", 3916) //visual issues
+            entry("a280", 2579),
+            entry("berlin52", 7542),
+            entry("ch130", 6110),
+            entry("ch150", 6528),
+            entry("eil101", 629),
+            entry("kroA100", 21282),
+            entry("kroC100", 20749), //last circle
+            entry("kroD100", 21294),
+            entry("lin105", 14379),
+            entry("pr76", 108159),
+            entry("tsp225", 3916) //visual issues?
     );
     private static final Map<String, Integer> otherInstances = Map.ofEntries(
             entry("without_optimal_route/bier127", 118282),
@@ -65,6 +65,7 @@ public class Main {
 
 
     public static void main(String[] args) {
+        double avgPerfomance = 0.0;
         for (String key : solvedInstances.keySet()) {
             System.out.println("********************");
             System.out.println("INSTANCE: " + key);
@@ -90,17 +91,23 @@ public class Main {
                 res = pathFindingPhase.iterateNodes(quadtreePhaseInstance);
                 double optimal = solvedInstances.get(key);
                 System.out.println("OPTIMAL: " + optimal);
-                System.out.println("PERFORMANCE: " + -1 * CommonUtils.round((res.getLength() - optimal) * 100 /optimal)+ "%");
+                double perfomance = -1 * CommonUtils.round((res.getLength() - optimal) * 100 /optimal);
+                avgPerfomance += perfomance;
+                System.out.println("PERFORMANCE: " + perfomance + "%");
 
-                Plotter.PlotSolution plotSolution = new Plotter.PlotSolution(res.getSequence(), dimensions);
-                plotSolution.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-                plotSolution.setVisible(true);
-                plotSolution.setTitle(key);
+//                Plotter.PlotSolution plotSolution = new Plotter.PlotSolution(res.getSequence(), dimensions);
+//                plotSolution.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+//                plotSolution.setVisible(true);
+//                plotSolution.setTitle(key);
 
-                Plotter.PlotOptimal plotOptimal = new Plotter.PlotOptimal(original, opt, dimensions);
-                plotOptimal.setVisible(true);
-                plotOptimal.setTitle(key + " optimal");
+//                Plotter.PlotOptimal plotOptimal = new Plotter.PlotOptimal(original, opt, dimensions);
+//                plotOptimal.setVisible(true);
+//                plotOptimal.setTitle(key + " optimal");
             }
+        }
+        if (solvedInstances.size() > 1) {
+            System.out.println("********************");
+            System.out.println("AVG PERFORMANCE: " + CommonUtils.round(avgPerfomance/solvedInstances.size()) + "%");
         }
     }
 }
