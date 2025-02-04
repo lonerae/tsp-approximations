@@ -172,6 +172,7 @@ public class PathFindingPhase {
             }
         }
         addOnLinePoints();
+        postProcessing(new Segment(points.getLast(), points.getFirst(), false));
     }
 
     private Point lead = null;
@@ -257,32 +258,9 @@ public class PathFindingPhase {
         int dominated = 0;
         for (Segment segment : solutionSegments) {
             if (SegmentUtils.dominate(candidateSegment, segment)) {
-                dominated += 1;
-                points.remove(segment.getStart());
-                points.remove(segment.getEnd());
-                toBeDominated.add(solutionSegments.indexOf(segment));
-                if (SegmentUtils.euclideanDistance(candidateSegment.getStart(),segment.getStart()) < SegmentUtils.euclideanDistance(candidateSegment.getStart(), segment.getEnd())) {
-                    points.add(segment.getStart());
-                    points.add(segment.getEnd());
-                    toBeAdded.add(new Segment(candidateSegment.getStart(), segment.getStart(), false));
-                    toBeAdded.add(new Segment(segment.getStart(), segment.getEnd(), false));
-                    toBeAdded.add(new Segment(segment.getEnd(), candidateSegment.getEnd(), false));
-                } else {
-                    points.add(segment.getEnd());
-                    points.add(segment.getStart());
-                    toBeAdded.add(new Segment(candidateSegment.getStart(), segment.getEnd(), false));
-                    toBeAdded.add(new Segment(segment.getEnd(), segment.getStart(), false));
-                    toBeAdded.add(new Segment(segment.getStart(), candidateSegment.getEnd(), false));
-                }
+                dominated = handleDominated(candidateSegment, segment, dominated, toBeDominated, toBeAdded);
             } else if (SegmentUtils.intersect(candidateSegment, segment)) {
-                int index1 = points.indexOf(segment.getEnd());
-                int index2 = points.indexOf(candidateSegment.getStart());
-                if (index1 > -1 && index2 > -1) {
-                    points.set(index1, candidateSegment.getStart());
-                    points.set(index2, segment.getEnd());
-                    toBeDeleted.add(solutionSegments.indexOf(segment));
-                    toBeReplaced.add(new Segment(segment.getStart(), candidateSegment.getStart(), false));
-                }
+                handleIntersected(candidateSegment, segment, toBeDeleted, toBeReplaced);
             }
         }
         for (Integer index : toBeDominated) {
@@ -298,6 +276,38 @@ public class PathFindingPhase {
         }
         solutionSegments.addAll(toBeAdded);
         if (toBeDeleted.isEmpty() && dominated == 0 && !points.isEmpty()) solutionSegments.add(candidateSegment);
+    }
+
+    private void handleIntersected(Segment candidateSegment, Segment segment, ArrayList<Integer> toBeDeleted, ArrayList<Segment> toBeReplaced) {
+        int index1 = points.indexOf(segment.getEnd());
+        int index2 = points.indexOf(candidateSegment.getStart());
+        if (index1 > -1 && index2 > -1) {
+            points.set(index1, candidateSegment.getStart());
+            points.set(index2, segment.getEnd());
+            toBeDeleted.add(solutionSegments.indexOf(segment));
+            toBeReplaced.add(new Segment(segment.getStart(), candidateSegment.getStart(), false));
+        }
+    }
+
+    private int handleDominated(Segment candidateSegment, Segment segment, int dominated, ArrayList<Integer> toBeDominated, ArrayList<Segment> toBeAdded) {
+        dominated += 1;
+        points.remove(segment.getStart());
+        points.remove(segment.getEnd());
+        toBeDominated.add(solutionSegments.indexOf(segment));
+        if (SegmentUtils.euclideanDistance(candidateSegment.getStart(), segment.getStart()) < SegmentUtils.euclideanDistance(candidateSegment.getStart(), segment.getEnd())) {
+            points.add(segment.getStart());
+            points.add(segment.getEnd());
+            toBeAdded.add(new Segment(candidateSegment.getStart(), segment.getStart(), false));
+            toBeAdded.add(new Segment(segment.getStart(), segment.getEnd(), false));
+            toBeAdded.add(new Segment(segment.getEnd(), candidateSegment.getEnd(), false));
+        } else {
+            points.add(segment.getEnd());
+            points.add(segment.getStart());
+            toBeAdded.add(new Segment(candidateSegment.getStart(), segment.getEnd(), false));
+            toBeAdded.add(new Segment(segment.getEnd(), segment.getStart(), false));
+            toBeAdded.add(new Segment(segment.getStart(), candidateSegment.getEnd(), false));
+        }
+        return dominated;
     }
 
     private int compare(Point p1, Point p2) {
