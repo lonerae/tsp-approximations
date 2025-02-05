@@ -15,8 +15,9 @@ public class PreProcessingPhase {
     private final Map<Integer, Point> square = new HashMap<>();
     private double squareSide = 0;
 
-    // TODO: higher E => loss of towns
+    // TODO: loss E
     private static final int E = 1;
+    private final Map<Point, ArrayList<Point>> clusters = new HashMap<>();
 
     public PreProcessingPhase(List<Point> points) {
         this.points = points;
@@ -91,6 +92,11 @@ public class PreProcessingPhase {
         horizontalSweep(gridUnit);
         verticalSweep(gridUnit);
         // Remove duplicates after perturbation
+        for (Point point : points) {
+            if (clusters.containsKey(point)) {
+                clusters.get(point).add(point.getOriginal());
+            } else clusters.put(point, new ArrayList<>());
+        }
         points = new ArrayList<>(new HashSet<>(points));
     }
 

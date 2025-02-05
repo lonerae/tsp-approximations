@@ -10,8 +10,10 @@ import org.apache.logging.log4j.Logger;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import static java.util.Objects.isNull;
+import static java.util.function.Predicate.not;
 
 public class PathFindingPhase {
     private static final Logger LOGGER = LogManager.getLogger();
@@ -36,7 +38,7 @@ public class PathFindingPhase {
         this.townNumber = townNumber;
     }
 
-    public Solution iterateNodes(QuadtreePhase quadtreePhaseInstance) {
+    public Solution iterateNodes(QuadtreePhase quadtreePhaseInstance, Map<Point, ArrayList<Point>> clusters) {
         for (QuadNode node : quadtreePhaseInstance.getQuadNodes()) {
             calculateNodePaths(node);
             iteratedNodes.add(node);
@@ -60,7 +62,7 @@ public class PathFindingPhase {
         }
         calculateTSP();
         if (!isNull(winner)) {
-            synthesize(winner);
+            synthesize(winner, clusters);
             LOGGER.log(Level.INFO,"TOWNS VISITED: {}/{}", test , townNumber);
             double actualTarget = solutionSegments.stream()
                     .map(segment -> SegmentUtils.euclideanDistance(segment.getStart(), segment.getEnd()))
@@ -147,7 +149,7 @@ public class PathFindingPhase {
     }
 
     private int test = 0;
-    private void synthesize(List<Segment> tsp) {
+    private void synthesize(List<Segment> tsp, Map<Point, ArrayList<Point>> clusters) {
         int count = 1;
         if (!isNull(tsp.getFirst().getTown())) {
             points.add(tsp.getFirst().getTown().getOriginal());
@@ -178,6 +180,29 @@ public class PathFindingPhase {
         }
         addOnLinePoints();
         postProcessing(new Segment(points.getLast(), points.getFirst(), false));
+        explodeClusters(clusters);
+    }
+
+    private void explodeClusters(Map<Point, ArrayList<Point>> clusters) {
+        for (Point key : clusters.keySet()) {
+            if (!clusters.get(key).isEmpty()) {
+                int pointIndex = points.indexOf(key.getOriginal());
+                int segmentIndex = (int) solutionSegments.stream().map(Segment::getStart).takeWhile(not(key.getOriginal()::equals)).count();
+                if (pointIndex > -1 && segmentIndex < solutionSegments.size()) {
+                    solutionSegments.remove(segmentIndex);
+                    for (Point point : clusters.get(key)) {
+                        points.add(pointIndex + 1, point);
+                        Segment candidateSegment = new Segment(points.get(pointIndex), points.get(pointIndex+1), false);
+                        solutionSegments.add(segmentIndex, candidateSegment);
+                        pointIndex++;
+                        segmentIndex++;
+                        test++;
+                    }
+                    Segment candidateSegment = new Segment(points.get(pointIndex), points.get(pointIndex+1), false);
+                    solutionSegments.add(segmentIndex, candidateSegment);
+                }
+            }
+        }
     }
 
     private Point lead = null;

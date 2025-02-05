@@ -27,16 +27,16 @@ public class Main {
 
     private static Map<String, Integer> initializeInstances() {
         Map<String, Integer> solvedInstances = new HashMap<>();
-//        solvedInstances.put("a280", 2579);
+        solvedInstances.put("a280", 2579);
         solvedInstances.put("berlin52", 7542);
-//        solvedInstances.put("ch130", 6110);
-//        solvedInstances.put("ch150", 6528);
-//        solvedInstances.put("eil101", 629);
-//        solvedInstances.put("kroA100", 21282);
-//        solvedInstances.put("kroC100", 20749);
-//        solvedInstances.put("kroD100", 21294);
-//        solvedInstances.put("lin105", 14379);
-//        solvedInstances.put("pr76", 108159);
+        solvedInstances.put("ch130", 6110);
+        solvedInstances.put("ch150", 6528);
+        solvedInstances.put("eil101", 629);
+        solvedInstances.put("kroA100", 21282);
+        solvedInstances.put("kroC100", 20749);
+        solvedInstances.put("kroD100", 21294);
+        solvedInstances.put("lin105", 14379);
+        solvedInstances.put("pr76", 108159);
         return solvedInstances;
     }
 
@@ -63,7 +63,7 @@ public class Main {
             for (int portalsPerNodeSide = 1; portalsPerNodeSide <= MAXIMUM_PORTALS_PER_NODE_SIDE; portalsPerNodeSide++) {
                 LOGGER.log(Level.INFO, "PORTALS: {}", portalsPerNodeSide);
 
-                Solution currentRes = getInstanceSolution(preProcessingPhaseInstance, portalsPerNodeSide, points);
+                Solution currentRes = getInstanceSolution(preProcessingPhaseInstance, portalsPerNodeSide, points, preProcessingPhaseInstance.getClusters());
                 if (isNull(res) || res.getLength() > currentRes.getLength()) res = currentRes;
             }
             if (!isNull(res)) {
@@ -83,13 +83,13 @@ public class Main {
         }
     }
 
-    private static Solution getInstanceSolution(PreProcessingPhase preProcessingPhaseInstance, int portalsPerNodeSide, List<Point> points) {
+    private static Solution getInstanceSolution(PreProcessingPhase preProcessingPhaseInstance, int portalsPerNodeSide, List<Point> points, Map<Point, ArrayList<Point>> clusters) {
         QuadtreePhase quadtreePhaseInstance;
         PathFindingPhase pathFindingPhase;
         quadtreePhaseInstance = new QuadtreePhase(preProcessingPhaseInstance.getSquareSide(), preProcessingPhaseInstance.getPoints(), portalsPerNodeSide);
         quadtreePhaseInstance.assignPortals();
         pathFindingPhase = new PathFindingPhase(preProcessingPhaseInstance.getSquareSide(), points.size());
-        return pathFindingPhase.iterateNodes(quadtreePhaseInstance);
+        return pathFindingPhase.iterateNodes(quadtreePhaseInstance, clusters);
     }
 
     private static void plotGraphs(String key, Solution res, double[] dimensions, List<Point> original, ArrayList<Integer> opt) {
