@@ -10,24 +10,24 @@ import java.util.*;
 public class PreProcessingPhase {
 
     private List<Point> points;
+    private final int e;
     private final int size;
 
     private final Map<Integer, Point> square = new HashMap<>();
     private double squareSide = 0;
 
-    // TODO: loss E
-    private static final int E = 1;
     private final Map<Point, ArrayList<Point>> clusters = new HashMap<>();
 
-    public PreProcessingPhase(List<Point> points) {
+    public PreProcessingPhase(List<Point> points, int e) {
         this.points = points;
         this.size = points.size();
+        this.e = e;
     }
 
     public double[] preprocess() {
         double[] dimensions = this.createBoundingBox();
-        this.moveAndScaleBox();
-        this.snapToGrid();
+        this.moveBox();
+        this.snapToGridAndScale();
         return dimensions;
     }
 
@@ -64,7 +64,7 @@ public class PreProcessingPhase {
         return dimensions;
     }
 
-    private void moveAndScaleBox() {
+    private void moveBox() {
         // Move box to origin
         for (Point p : points) {
             p.setOriginal(new Point(p.getX(), p.getY()));
@@ -75,22 +75,22 @@ public class PreProcessingPhase {
             edge.setX(CommonUtils.round(edge.getX() - square.get(3).getX()));
             edge.setY(CommonUtils.round(edge.getY() - square.get(3).getY()));
         }
-        // Scale box
-        for (Point p : points) {
-            p.setX(CommonUtils.round(p.getX() * 8 * size / (E * squareSide)));
-            p.setY(CommonUtils.round(p.getY() * 8 * size / (E * squareSide)));
-        }
-        for (Point edge : square.values()) {
-            edge.setX(CommonUtils.round(edge.getX() * 8 * size / (E * squareSide)));
-            edge.setY(CommonUtils.round(edge.getY() * 8 * size / (E * squareSide)));
-        }
-        squareSide = 8.0 * size;
     }
 
-    private void snapToGrid() {
-        double gridUnit = E * squareSide / (2 * size);
+    private void snapToGridAndScale() {
+        double gridUnit = e * squareSide / (2 * size);
         horizontalSweep(gridUnit);
         verticalSweep(gridUnit);
+        // Scale box
+        for (Point p : points) {
+            p.setX(CommonUtils.round(p.getX() * 8 * size / (e * squareSide)));
+            p.setY(CommonUtils.round(p.getY() * 8 * size / (e * squareSide)));
+        }
+        for (Point edge : square.values()) {
+            edge.setX(CommonUtils.round(edge.getX() * 8 * size / (e * squareSide)));
+            edge.setY(CommonUtils.round(edge.getY() * 8 * size / (e * squareSide)));
+        }
+        squareSide = 8.0 * size / e;
         // Remove duplicates after perturbation
         for (Point point : points) {
             if (clusters.containsKey(point)) {

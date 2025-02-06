@@ -1,5 +1,6 @@
 package gr.lonerae.phases;
 
+import gr.lonerae.Arora;
 import gr.lonerae.model.*;
 import gr.lonerae.utils.QuadTreeUtils;
 import gr.lonerae.utils.SegmentUtils;
@@ -32,6 +33,21 @@ public class PathFindingPhase {
     private final List<QuadNode> iteratedNodes = new ArrayList<>();
 
     private final ArrayList<Point> points = new ArrayList<>();
+
+    private final ArrayList<Segment> temp = new ArrayList<>();
+
+    private double target = 0.0;
+    private List<Segment> winner;
+
+    private int test = 0;
+
+    private Point lead = null;
+    private Segment currentSegment = null;
+    private ArrayList<Segment> solutionSegments = new ArrayList<>();
+    private ArrayList<Point> onLinePoints = new ArrayList<>();
+
+    private double currentLength = 0;
+    private double bestLength = 0;
 
     public PathFindingPhase(double squareSize, int townNumber) {
         this.squareSize = squareSize;
@@ -73,8 +89,6 @@ public class PathFindingPhase {
         return null;
     }
 
-    private final ArrayList<Segment> temp = new ArrayList<>();
-
     private void calculateTSP() {
         ArrayList<QuadNode> finalNodes = new ArrayList<>();
         for (QuadNode node : iteratedNodes) {
@@ -89,9 +103,6 @@ public class PathFindingPhase {
             constructTSP(segment.getStart(), segment.getEnd(), finalNodes.subList(1,4));
         }
     }
-
-    private double target = 0.0;
-    private List<Segment> winner;
 
     private double constructTSP(Point entrance, Point stitch, List<QuadNode> unvisited) {
         for (QuadNode node : unvisited) {
@@ -148,7 +159,6 @@ public class PathFindingPhase {
         }
     }
 
-    private int test = 0;
     private void synthesize(List<Segment> tsp, Map<Point, ArrayList<Point>> clusters) {
         int count = 1;
         if (!isNull(tsp.getFirst().getTown())) {
@@ -184,31 +194,49 @@ public class PathFindingPhase {
     }
 
     private void explodeClusters(Map<Point, ArrayList<Point>> clusters) {
-        for (Point key : clusters.keySet()) {
-            if (!clusters.get(key).isEmpty()) {
-                int pointIndex = points.indexOf(key.getOriginal());
-                int segmentIndex = (int) solutionSegments.stream().map(Segment::getStart).takeWhile(not(key.getOriginal()::equals)).count();
-                if (pointIndex > -1 && segmentIndex < solutionSegments.size()) {
-                    solutionSegments.remove(segmentIndex);
-                    for (Point point : clusters.get(key)) {
-                        points.add(pointIndex + 1, point);
-                        Segment candidateSegment = new Segment(points.get(pointIndex), points.get(pointIndex+1), false);
-                        solutionSegments.add(segmentIndex, candidateSegment);
-                        pointIndex++;
-                        segmentIndex++;
+        if (isNull(clusters)) return;
+        for (Map.Entry<Point, ArrayList<Point>> entry : clusters.entrySet()) {
+            if (!entry.getValue().isEmpty()) {
+                int segmentIndex = (int) solutionSegments.stream().map(Segment::getStart).takeWhile(not(entry.getKey().getOriginal()::equals)).count();
+                if (segmentIndex+1 < solutionSegments.size()) solutionSegments.remove(segmentIndex + 1);
+                if (segmentIndex < solutionSegments.size()) solutionSegments.remove(segmentIndex);
+                if (segmentIndex-1 > -1) solutionSegments.remove(segmentIndex - 1);
+                Point clusterStart = new Point(entry.getKey().getOriginal().getX(), entry.getKey().getOriginal().getY());
+                int clusterStartIndex = points.indexOf(clusterStart);
+                int clusterEndIndex = clusterStartIndex + 1;
+                Point clusterEnd;
+                if (clusterEndIndex < points.size()) clusterEnd = new Point(points.get(clusterStartIndex+1).getX(), points.get(clusterStartIndex+1).getY());
+                else clusterEnd = points.getFirst();
+                ArrayList<Point> clusterPoints = new ArrayList<>(entry.getValue());
+                clusterPoints.add(clusterStart);
+                clusterPoints.add(clusterEnd);
+                PreProcessingPhase aroraForCluster = new PreProcessingPhase(clusterPoints, 1);
+                aroraForCluster.preprocess();
+                Solution s = Arora.getInstanceSolution(aroraForCluster, 1, clusterPoints, aroraForCluster.getClusters());
+                int sIndex = Math.min(s.getSequence().indexOf(clusterStart.getOriginal()), s.getSequence().indexOf(clusterEnd.getOriginal()));
+                int eIndex = Math.max(s.getSequence().indexOf(clusterStart.getOriginal()), s.getSequence().indexOf(clusterEnd.getOriginal()));
+                int inputIndex = clusterStartIndex;
+                for (int i = 0; i < s.getSequence().size(); i++) {
+                    solutionSegments.add(new Segment(points.get(inputIndex-1), s.getSequence().get(i), false));
+                    if (i < sIndex) {
+                        points.add(inputIndex, s.getSequence().get(i));
+                        inputIndex++;
+                        test++;
+                    } else if (i > sIndex && i < eIndex) {
+                        inputIndex++;
+                        points.add(inputIndex, s.getSequence().get(i));
+                        test++;
+                    } else if (i > eIndex) {
+                        inputIndex += 2;
+                        points.add(inputIndex, s.getSequence().get(i));
                         test++;
                     }
-                    Segment candidateSegment = new Segment(points.get(pointIndex), points.get(pointIndex+1), false);
-                    solutionSegments.add(segmentIndex, candidateSegment);
                 }
+                solutionSegments.add(new Segment(s.getSequence().getLast(), points.get(clusterStartIndex+clusterPoints.size()), false));
             }
         }
     }
 
-    private Point lead = null;
-    private Segment currentSegment = null;
-    private ArrayList<Segment> solutionSegments = new ArrayList<>();
-    private ArrayList<Point> onLinePoints = new ArrayList<>();
     private void addTownToSolution(List<Segment> tsp, int i) {
         if (!isNull(tsp.get(i).getTown())) {
             if (points.size() > 1 && isNull(currentSegment)) currentSegment = new Segment(points.get(points.size() - 2), points.getLast(), false);
@@ -295,9 +323,9 @@ public class PathFindingPhase {
         }
         for (Integer index : toBeDominated) {
             Segment segment = solutionSegments.get(index);
-            if (solutionSegments.get(index+1).getStart().equals(segment.getEnd())) solutionSegments.remove(index+1);
+            if (index + 1 < solutionSegments.size() && solutionSegments.get(index+1).getStart().equals(segment.getEnd())) solutionSegments.remove(index+1);
             solutionSegments.remove(index);
-            if (solutionSegments.get(index-1).getEnd().equals(segment.getStart())) solutionSegments.remove(index-1);
+            if (index > 0 && solutionSegments.get(index-1).getEnd().equals(segment.getStart())) solutionSegments.remove(index-1);
         }
         for (Integer index : toBeDeleted) {
             solutionSegments.add(new Segment(solutionSegments.get(index).getEnd(), candidateSegment.getEnd(), false));
@@ -491,9 +519,6 @@ public class PathFindingPhase {
             pointCount -= node.getPoints().size();
         }
     }
-
-    private double currentLength = 0;
-    private double bestLength = 0;
 
     private void savePath(QuadNode node) {
         if (pointCount == pointCountTarget) {
