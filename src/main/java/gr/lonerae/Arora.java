@@ -11,12 +11,13 @@ import java.util.List;
 import java.util.Map;
 
 public class Arora {
-    public static Solution getInstanceSolution(PreProcessingPhase preProcessingPhaseInstance, int portalsPerNodeSide, List<Point> points, Map<Point, ArrayList<Point>> clusters) {
-        QuadtreePhase quadtreePhaseInstance;
-        PathFindingPhase pathFindingPhase;
-        quadtreePhaseInstance = new QuadtreePhase(preProcessingPhaseInstance.getSquareSide(), preProcessingPhaseInstance.getPoints(), portalsPerNodeSide);
+
+    private Arora() {}
+
+    public static Solution getInstanceSolution(PreProcessingPhase preProcessingPhaseInstance, int portalsPerNodeSide, List<Point> points, Map<Point, ArrayList<Point>> clusters, boolean verbose) {
+        QuadtreePhase quadtreePhaseInstance = new QuadtreePhase(preProcessingPhaseInstance.getSquareSide(), preProcessingPhaseInstance.getPoints(), portalsPerNodeSide);
         quadtreePhaseInstance.assignPortals();
-        pathFindingPhase = new PathFindingPhase(preProcessingPhaseInstance.getSquareSide(), points.size());
-        return pathFindingPhase.iterateNodes(quadtreePhaseInstance, clusters);
+        PathFindingPhase pathFindingPhase = new PathFindingPhase(preProcessingPhaseInstance.getSquareSide(), points.size());
+        return pathFindingPhase.iterateNodes(quadtreePhaseInstance, clusters, verbose);
     }
 }

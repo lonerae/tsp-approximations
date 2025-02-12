@@ -43,8 +43,8 @@ public class PathFindingPhase {
 
     private Point lead = null;
     private Segment currentSegment = null;
-    private ArrayList<Segment> solutionSegments = new ArrayList<>();
-    private ArrayList<Point> onLinePoints = new ArrayList<>();
+    private final ArrayList<Segment> solutionSegments = new ArrayList<>();
+    private final ArrayList<Point> onLinePoints = new ArrayList<>();
 
     private double currentLength = 0;
     private double bestLength = 0;
@@ -54,7 +54,7 @@ public class PathFindingPhase {
         this.townNumber = townNumber;
     }
 
-    public Solution iterateNodes(QuadtreePhase quadtreePhaseInstance, Map<Point, ArrayList<Point>> clusters) {
+    public Solution iterateNodes(QuadtreePhase quadtreePhaseInstance, Map<Point, ArrayList<Point>> clusters, boolean verbose) {
         for (QuadNode node : quadtreePhaseInstance.getQuadNodes()) {
             calculateNodePaths(node);
             iteratedNodes.add(node);
@@ -79,11 +79,11 @@ public class PathFindingPhase {
         calculateTSP();
         if (!isNull(winner)) {
             synthesize(winner, clusters);
-            LOGGER.log(Level.INFO,"TOWNS VISITED: {}/{}", test , townNumber);
+            if (verbose) LOGGER.log(Level.INFO,"TOWNS VISITED: {}/{}", test , townNumber);
             double actualTarget = solutionSegments.stream()
                     .map(segment -> SegmentUtils.euclideanDistance(segment.getStart(), segment.getEnd()))
                     .reduce(0.0, Double::sum);
-            LOGGER.log(Level.INFO,"LENGTH: {}", actualTarget);
+            if (verbose) LOGGER.log(Level.INFO,"LENGTH: {}", actualTarget);
             return new Solution(actualTarget, points);
         }
         return null;
@@ -210,9 +210,11 @@ public class PathFindingPhase {
                 ArrayList<Point> clusterPoints = new ArrayList<>(entry.getValue());
                 clusterPoints.add(clusterStart);
                 clusterPoints.add(clusterEnd);
-                PreProcessingPhase aroraForCluster = new PreProcessingPhase(clusterPoints, 1);
+                // Points clustered in the first place are close to each other.
+                // Therefore, we set a tiny e, to certainly distinguish them.
+                PreProcessingPhase aroraForCluster = new PreProcessingPhase(clusterPoints, 0.01);
                 aroraForCluster.preprocess();
-                Solution s = Arora.getInstanceSolution(aroraForCluster, 1, clusterPoints, aroraForCluster.getClusters());
+                Solution s = Arora.getInstanceSolution(aroraForCluster, 3, clusterPoints, aroraForCluster.getClusters(), false);
                 int sIndex = Math.min(s.getSequence().indexOf(clusterStart.getOriginal()), s.getSequence().indexOf(clusterEnd.getOriginal()));
                 int eIndex = Math.max(s.getSequence().indexOf(clusterStart.getOriginal()), s.getSequence().indexOf(clusterEnd.getOriginal()));
                 int inputIndex = clusterStartIndex;

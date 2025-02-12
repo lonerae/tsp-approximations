@@ -10,7 +10,7 @@ import java.util.*;
 public class PreProcessingPhase {
 
     private List<Point> points;
-    private final int e;
+    private final double e;
     private final int size;
 
     private final Map<Integer, Point> square = new HashMap<>();
@@ -18,7 +18,7 @@ public class PreProcessingPhase {
 
     private final Map<Point, ArrayList<Point>> clusters = new HashMap<>();
 
-    public PreProcessingPhase(List<Point> points, int e) {
+    public PreProcessingPhase(List<Point> points, double e) {
         this.points = points;
         this.size = points.size();
         this.e = e;
