@@ -39,7 +39,7 @@ public class PathFindingPhase {
     private double target = 0.0;
     private List<Segment> winner;
 
-    private int test = 0;
+    private int visitedTowns = 0;
 
     private Point lead = null;
     private Segment currentSegment = null;
@@ -79,7 +79,7 @@ public class PathFindingPhase {
         calculateTSP();
         if (!isNull(winner)) {
             synthesize(winner, clusters);
-            if (verbose) LOGGER.log(Level.INFO,"TOWNS VISITED: {}/{}", test , townNumber);
+            if (verbose) LOGGER.log(Level.INFO,"TOWNS VISITED: {}/{}", visitedTowns, townNumber);
             double actualTarget = solutionSegments.stream()
                     .map(segment -> SegmentUtils.euclideanDistance(segment.getStart(), segment.getEnd()))
                     .reduce(0.0, Double::sum);
@@ -163,7 +163,7 @@ public class PathFindingPhase {
         int count = 1;
         if (!isNull(tsp.getFirst().getTown())) {
             points.add(tsp.getFirst().getTown().getOriginal());
-            test++;
+            visitedTowns++;
         }
         Point current = tsp.getFirst().getEnd();
         int currentIndex = 0;
@@ -197,10 +197,7 @@ public class PathFindingPhase {
         if (isNull(clusters)) return;
         for (Map.Entry<Point, ArrayList<Point>> entry : clusters.entrySet()) {
             if (!entry.getValue().isEmpty()) {
-                int segmentIndex = (int) solutionSegments.stream().map(Segment::getStart).takeWhile(not(entry.getKey().getOriginal()::equals)).count();
-                if (segmentIndex+1 < solutionSegments.size()) solutionSegments.remove(segmentIndex + 1);
-                if (segmentIndex < solutionSegments.size()) solutionSegments.remove(segmentIndex);
-                if (segmentIndex-1 > -1) solutionSegments.remove(segmentIndex - 1);
+                disconnectClusterSegments(entry);
                 Point clusterStart = new Point(entry.getKey().getOriginal().getX(), entry.getKey().getOriginal().getY());
                 int clusterStartIndex = points.indexOf(clusterStart);
                 int clusterEndIndex = clusterStartIndex + 1;
@@ -215,28 +212,39 @@ public class PathFindingPhase {
                 PreProcessingPhase aroraForCluster = new PreProcessingPhase(clusterPoints, 0.01);
                 aroraForCluster.preprocess();
                 Solution s = Arora.getInstanceSolution(aroraForCluster, 3, clusterPoints, aroraForCluster.getClusters(), false);
-                int sIndex = Math.min(s.getSequence().indexOf(clusterStart.getOriginal()), s.getSequence().indexOf(clusterEnd.getOriginal()));
-                int eIndex = Math.max(s.getSequence().indexOf(clusterStart.getOriginal()), s.getSequence().indexOf(clusterEnd.getOriginal()));
-                int inputIndex = clusterStartIndex;
-                for (int i = 0; i < s.getSequence().size(); i++) {
-                    solutionSegments.add(new Segment(points.get(inputIndex-1), s.getSequence().get(i), false));
-                    if (i < sIndex) {
-                        points.add(inputIndex, s.getSequence().get(i));
-                        inputIndex++;
-                        test++;
-                    } else if (i > sIndex && i < eIndex) {
-                        inputIndex++;
-                        points.add(inputIndex, s.getSequence().get(i));
-                        test++;
-                    } else if (i > eIndex) {
-                        inputIndex += 2;
-                        points.add(inputIndex, s.getSequence().get(i));
-                        test++;
-                    }
-                }
-                solutionSegments.add(new Segment(s.getSequence().getLast(), points.get(clusterStartIndex+clusterPoints.size()), false));
+                reconnectClusterSegments(s, clusterStart, clusterEnd, clusterStartIndex, clusterPoints);
             }
         }
+    }
+
+    private void disconnectClusterSegments(Map.Entry<Point, ArrayList<Point>> entry) {
+        int segmentIndex = (int) solutionSegments.stream().map(Segment::getStart).takeWhile(not(entry.getKey().getOriginal()::equals)).count();
+        if (segmentIndex+1 < solutionSegments.size()) solutionSegments.remove(segmentIndex + 1);
+        if (segmentIndex < solutionSegments.size()) solutionSegments.remove(segmentIndex);
+        if (segmentIndex-1 > -1) solutionSegments.remove(segmentIndex - 1);
+    }
+
+    private void reconnectClusterSegments(Solution s, Point clusterStart, Point clusterEnd, int clusterStartIndex, ArrayList<Point> clusterPoints) {
+        int sIndex = Math.min(s.getSequence().indexOf(clusterStart.getOriginal()), s.getSequence().indexOf(clusterEnd.getOriginal()));
+        int eIndex = Math.max(s.getSequence().indexOf(clusterStart.getOriginal()), s.getSequence().indexOf(clusterEnd.getOriginal()));
+        int inputIndex = clusterStartIndex;
+        for (int i = 0; i < s.getSequence().size(); i++) {
+            solutionSegments.add(new Segment(points.get(inputIndex-1), s.getSequence().get(i), false));
+            if (i < sIndex) {
+                points.add(inputIndex, s.getSequence().get(i));
+                inputIndex++;
+                visitedTowns++;
+            } else if (i > sIndex && i < eIndex) {
+                inputIndex++;
+                points.add(inputIndex, s.getSequence().get(i));
+                visitedTowns++;
+            } else if (i > eIndex) {
+                inputIndex += 2;
+                points.add(inputIndex, s.getSequence().get(i));
+                visitedTowns++;
+            }
+        }
+        solutionSegments.add(new Segment(s.getSequence().getLast(), points.get(clusterStartIndex + clusterPoints.size()), false));
     }
 
     private void addTownToSolution(List<Segment> tsp, int i) {
@@ -253,7 +261,7 @@ public class PathFindingPhase {
                     postProcessing(candidateSegment);
                 }
                 points.add(candidate);
-                test++;
+                visitedTowns++;
             }
         }
     }
@@ -269,7 +277,7 @@ public class PathFindingPhase {
                 if (!solutionSegments.isEmpty()) {
                     solutionSegments.removeLast();
                 }
-                test -= 2;
+                visitedTowns -= 2;
             }
         }
         if (!points.isEmpty()) lead = points.getLast();
@@ -304,7 +312,7 @@ public class PathFindingPhase {
                 points.add(onLinePoints.get(i));
             }
             points.add(onLinePoints.getLast());
-            test += onLinePoints.size();
+            visitedTowns += onLinePoints.size();
             onLinePoints.clear();
         }
     }
