@@ -39,10 +39,10 @@ public class Main {
     private static List<Double> initializeEValues() {
         List<Double> eValues = new ArrayList<>();
         eValues.add(1.0);
-//        eValues.add(0.5);
-//        eValues.add(0.2);
-//        eValues.add(0.1);
-//        eValues.add(0.01);
+        eValues.add(0.5);
+        eValues.add(0.2);
+        eValues.add(0.1);
+        eValues.add(0.01);
         return eValues;
     }
 
@@ -50,9 +50,9 @@ public class Main {
         List<Integer> portalsPerNodeSide = new ArrayList<>();
         portalsPerNodeSide.add(1);
         portalsPerNodeSide.add(2);
-//        portalsPerNodeSide.add(3);
-//        portalsPerNodeSide.add(4);
-//        portalsPerNodeSide.add(5);
+        portalsPerNodeSide.add(3);
+        portalsPerNodeSide.add(4);
+        portalsPerNodeSide.add(5);
         return portalsPerNodeSide;
     }
 
@@ -136,9 +136,9 @@ public class Main {
         plotSolution.setVisible(true);
         plotSolution.setTitle("instance: " + key + ", e: " + e + ", portals: " + portalsPerNodeSide);
 
-//        Plotter.PlotOptimal plotOptimal = new Plotter.PlotOptimal(original, opt, dimensions);
-//        plotOptimal.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-//        plotOptimal.setVisible(true);
-//        plotOptimal.setTitle(key + " optimal");
+        Plotter.PlotOptimal plotOptimal = new Plotter.PlotOptimal(original, opt, dimensions);
+        plotOptimal.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        plotOptimal.setVisible(true);
+        plotOptimal.setTitle(key + " optimal");
     }
 }

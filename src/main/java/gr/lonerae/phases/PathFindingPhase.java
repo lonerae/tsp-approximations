@@ -1,6 +1,6 @@
 package gr.lonerae.phases;
 
-import gr.lonerae.Arora;
+import com.google.common.collect.Sets;
 import gr.lonerae.model.*;
 import gr.lonerae.utils.QuadTreeUtils;
 import gr.lonerae.utils.SegmentUtils;
@@ -8,10 +8,7 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static java.util.Objects.isNull;
 import static java.util.function.Predicate.not;
@@ -200,51 +197,35 @@ public class PathFindingPhase {
                 disconnectClusterSegments(entry);
                 Point clusterStart = new Point(entry.getKey().getOriginal().getX(), entry.getKey().getOriginal().getY());
                 int clusterStartIndex = points.indexOf(clusterStart);
-                int clusterEndIndex = clusterStartIndex + 1;
-                Point clusterEnd;
-                if (clusterEndIndex < points.size()) clusterEnd = new Point(points.get(clusterStartIndex+1).getX(), points.get(clusterStartIndex+1).getY());
-                else clusterEnd = points.getFirst();
-                ArrayList<Point> clusterPoints = new ArrayList<>(entry.getValue());
-                clusterPoints.add(clusterStart);
-                clusterPoints.add(clusterEnd);
-                // Points clustered in the first place are close to each other.
-                // Therefore, we set a tiny e, to certainly distinguish them.
-                PreProcessingPhase aroraForCluster = new PreProcessingPhase(clusterPoints, 0.01);
-                aroraForCluster.preprocess();
-                Solution s = Arora.getInstanceSolution(aroraForCluster, 3, clusterPoints, aroraForCluster.getClusters(), false);
-                reconnectClusterSegments(s, clusterStart, clusterEnd, clusterStartIndex, clusterPoints);
+                Set<Point> clusterPoints = new HashSet<>(entry.getValue());
+                reconnectClusterSegments(clusterPoints, clusterStartIndex);
             }
         }
+    }
+
+    private void reconnectClusterSegments(Set<Point> clusterPoints, int clusterStartIndex) {
+        double best = 0;
+        ArrayList<Point> bestOrder = new ArrayList<>();
+        for (Set<Point> comb : Sets.combinations(clusterPoints, clusterPoints.size())) {
+            double candidate = 0;
+            int i = 0;
+            ArrayList<Point> temp = new ArrayList<>(comb);
+            while (i < temp.size() - 1) {
+                candidate += SegmentUtils.euclideanDistance(temp.get(i), temp.get(i+1));
+            }
+            if (best == 0 || candidate < best) {
+                best = candidate;
+                bestOrder = temp;
+            }
+        }
+        points.addAll(clusterStartIndex +1, bestOrder);
+        visitedTowns += bestOrder.size();
     }
 
     private void disconnectClusterSegments(Map.Entry<Point, ArrayList<Point>> entry) {
         int segmentIndex = (int) solutionSegments.stream().map(Segment::getStart).takeWhile(not(entry.getKey().getOriginal()::equals)).count();
         if (segmentIndex+1 < solutionSegments.size()) solutionSegments.remove(segmentIndex + 1);
         if (segmentIndex < solutionSegments.size()) solutionSegments.remove(segmentIndex);
-        if (segmentIndex-1 > -1) solutionSegments.remove(segmentIndex - 1);
-    }
-
-    private void reconnectClusterSegments(Solution s, Point clusterStart, Point clusterEnd, int clusterStartIndex, ArrayList<Point> clusterPoints) {
-        int sIndex = Math.min(s.getSequence().indexOf(clusterStart.getOriginal()), s.getSequence().indexOf(clusterEnd.getOriginal()));
-        int eIndex = Math.max(s.getSequence().indexOf(clusterStart.getOriginal()), s.getSequence().indexOf(clusterEnd.getOriginal()));
-        int inputIndex = clusterStartIndex;
-        for (int i = 0; i < s.getSequence().size(); i++) {
-            solutionSegments.add(new Segment(points.get(inputIndex-1), s.getSequence().get(i), false));
-            if (i < sIndex) {
-                points.add(inputIndex, s.getSequence().get(i));
-                inputIndex++;
-                visitedTowns++;
-            } else if (i > sIndex && i < eIndex) {
-                inputIndex++;
-                points.add(inputIndex, s.getSequence().get(i));
-                visitedTowns++;
-            } else if (i > eIndex) {
-                inputIndex += 2;
-                points.add(inputIndex, s.getSequence().get(i));
-                visitedTowns++;
-            }
-        }
-        solutionSegments.add(new Segment(s.getSequence().getLast(), points.get(clusterStartIndex + clusterPoints.size()), false));
     }
 
     private void addTownToSolution(List<Segment> tsp, int i) {
