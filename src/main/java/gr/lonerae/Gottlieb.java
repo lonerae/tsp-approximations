@@ -49,7 +49,7 @@ public class Gottlieb {
     private static void aroraSubRoutine(Point start, Point end, List<Point> points, int townNumber) {
         PreProcessingPhase preProcessingPhaseInstance = new PreProcessingPhase(points, 1);
         preProcessingPhaseInstance.preprocess();
-        Solution solution = Arora.calculate(preProcessingPhaseInstance, 1, points, preProcessingPhaseInstance.getClusters(), false);
+        Solution solution = Arora.calculateWithEndpoints(preProcessingPhaseInstance, 1, points, preProcessingPhaseInstance.getClusters(), false, start, end);
         v.put(new GottliebKey(start, end, townNumber), solution);
     }
 }

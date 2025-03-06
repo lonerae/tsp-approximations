@@ -54,7 +54,7 @@ public class PathFindingPhase {
         this.timeLimit = timeLimit;
     }
 
-    public Solution iterateNodes(QuadtreePhase quadtreePhaseInstance, Map<Point, ArrayList<Point>> clusters, boolean verbose) {
+    public Solution iterateNodes(QuadtreePhase quadtreePhaseInstance, Map<Point, ArrayList<Point>> clusters, boolean verbose, boolean isTour) {
         boolean success = true;
         try(ExecutorService executor = Executors.newSingleThreadExecutor()) {
             Future<?> future = executor.submit(new LongRunningTask(quadtreePhaseInstance));
@@ -73,7 +73,7 @@ public class PathFindingPhase {
         if (success) {
             calculateTSP();
             if (!isNull(winner)) {
-                synthesize(winner, clusters);
+                synthesize(winner, clusters, isTour);
                 if (verbose) LOGGER.log(Level.INFO, "TOWNS VISITED: {}/{}", visitedTowns, townNumber);
                 double actualTarget = solutionSegments.stream()
                         .map(segment -> SegmentUtils.euclideanDistance(segment.getStart(), segment.getEnd()))
@@ -155,7 +155,7 @@ public class PathFindingPhase {
         }
     }
 
-    private void synthesize(List<Segment> tsp, Map<Point, ArrayList<Point>> clusters) {
+    private void synthesize(List<Segment> tsp, Map<Point, ArrayList<Point>> clusters, boolean isTour) {
         int count = 1;
         if (!isNull(tsp.getFirst().getTown())) {
             points.add(tsp.getFirst().getTown().getOriginal());
@@ -185,7 +185,7 @@ public class PathFindingPhase {
             }
         }
         addOnLinePoints();
-        postProcessing(new Segment(points.getLast(), points.getFirst(), false));
+        if (isTour) postProcessing(new Segment(points.getLast(), points.getFirst(), false));
         explodeClusters(clusters);
     }
 
