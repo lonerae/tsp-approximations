@@ -29,10 +29,16 @@ public class Main {
         solvedInstances.put("ch150", 6528);
         solvedInstances.put("eil101", 629);
         solvedInstances.put("kroA100", 21282);
+        solvedInstances.put("kroA150", 26524);
+        solvedInstances.put("kroA200", 29368);
         solvedInstances.put("kroC100", 20749);
         solvedInstances.put("kroD100", 21294);
+        solvedInstances.put("kroE100", 22068);
         solvedInstances.put("lin105", 14379);
+        solvedInstances.put("pr144", 58537);
         solvedInstances.put("pr76", 108159);
+        solvedInstances.put("rat195", 2323);
+        solvedInstances.put("st70", 675);
         return solvedInstances;
     }
 
@@ -53,6 +59,11 @@ public class Main {
         portalsPerNodeSide.add(3);
         portalsPerNodeSide.add(4);
         portalsPerNodeSide.add(5);
+        portalsPerNodeSide.add(6);
+        portalsPerNodeSide.add(7);
+        portalsPerNodeSide.add(8);
+        portalsPerNodeSide.add(9);
+        portalsPerNodeSide.add(10);
         return portalsPerNodeSide;
     }
 
@@ -80,11 +91,12 @@ public class Main {
         for (Point point : points) {
             original.add(new Point(point.getX(), point.getY()));
         }
-        ArrayList<Integer> opt = FileUtils.readOptTour(entry.getKey());
+//        ArrayList<Integer> opt = FileUtils.readOptTour(entry.getKey());
+        ArrayList<Integer> opt = new ArrayList<>();
 
         Solution res = null;
         for (double e : eValues) {
-            res = solveInstanceForChosenE(entry, portalsPerNodeSide, solvedInstances, e, points, res, original, opt);
+            res = solveInstanceForChosenE(portalsPerNodeSide, e, points, res);
         }
         if (!isNull(res)) {
             double optimal = solvedInstances.get(entry.getKey());
@@ -92,15 +104,13 @@ public class Main {
             double performance = -1 * CommonUtils.round((res.getLength() - optimal) * 100 / optimal);
             avgPerfomance += performance;
             LOGGER.log(Level.INFO, "PERFORMANCE: {}%", performance);
-
+            LOGGER.log(Level.INFO, "BEST SOLUTION: {}%", res.getLength());
+            plotGraphs(entry.getKey(), res, res.getDimensions(), original, opt, res.getE(), res.getPortalsPerSide());
         }
         return avgPerfomance;
     }
 
-    private static Solution solveInstanceForChosenE(
-            Map.Entry<String, Integer> entry, List<Integer> portalsPerNodeSide, Map<String, Integer> solvedInstances,
-            double e, List<Point> points, Solution res, List<Point> original, ArrayList<Integer> opt
-    ) {
+    private static Solution solveInstanceForChosenE(List<Integer> portalsPerNodeSide, double e, List<Point> points, Solution res) {
         double[] dimensions;
         LOGGER.log(Level.INFO, "E: {}", e);
         List<Point> pointsCopy = new ArrayList<>();
@@ -111,34 +121,36 @@ public class Main {
         dimensions = preProcessingPhaseInstance.preprocess();
 
         for (int portals : portalsPerNodeSide) {
-            res = solveInstanceForChosenEAndPortalsPerSide(entry, solvedInstances, e, points, res, original, opt, portals, preProcessingPhaseInstance, dimensions);
+            res = solveInstanceForChosenEAndPortalsPerSide(e, points, res, portals, preProcessingPhaseInstance);
+            res.setDimensions(dimensions);
+            if (res.isBest()) break;
         }
         return res;
     }
 
-    private static Solution solveInstanceForChosenEAndPortalsPerSide(
-            Map.Entry<String, Integer> entry, Map<String, Integer> solvedInstances, double e,
-            List<Point> points, Solution res, List<Point> original, ArrayList<Integer> opt,
-            int portals, PreProcessingPhase preProcessingPhaseInstance, double[] dimensions
-    ) {
+    private static Solution solveInstanceForChosenEAndPortalsPerSide(double e, List<Point> points, Solution res, int portals, PreProcessingPhase preProcessingPhaseInstance) {
         LOGGER.log(Level.INFO, "PORTALS: {}", portals);
-        Solution currentRes = Arora.getInstanceSolution(preProcessingPhaseInstance, portals, points, preProcessingPhaseInstance.getClusters(), true);
-        if (isNull(res) || res.getLength() > currentRes.getLength()) res = currentRes;
-        if (solvedInstances.size() == 1) {
-            plotGraphs(entry.getKey(), res, dimensions, original, opt, e, portals);
+        Solution currentRes = Arora.calculate(preProcessingPhaseInstance, portals, points, preProcessingPhaseInstance.getClusters(), true);
+        if (isNull(currentRes)) {
+            res.setBest(true);
+            return res;
+        } else {
+            currentRes.setPortalsPerSide(portals);
+            currentRes.setE(e);
         }
+        if (isNull(res) || res.getLength() > currentRes.getLength()) res = currentRes;
         return res;
     }
 
     private static void plotGraphs(String key, Solution res, double[] dimensions, List<Point> original, ArrayList<Integer> opt, Double e, Integer portalsPerNodeSide) {
         Plotter.PlotSolution plotSolution = new Plotter.PlotSolution(res.getSequence(), dimensions);
-        plotSolution.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        plotSolution.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
         plotSolution.setVisible(true);
         plotSolution.setTitle("instance: " + key + ", e: " + e + ", portals: " + portalsPerNodeSide);
 
-        Plotter.PlotOptimal plotOptimal = new Plotter.PlotOptimal(original, opt, dimensions);
-        plotOptimal.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-        plotOptimal.setVisible(true);
-        plotOptimal.setTitle(key + " optimal");
+//        Plotter.PlotOptimal plotOptimal = new Plotter.PlotOptimal(original, opt, dimensions);
+//        plotOptimal.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+//        plotOptimal.setVisible(true);
+//        plotOptimal.setTitle(key + " optimal");
     }
 }

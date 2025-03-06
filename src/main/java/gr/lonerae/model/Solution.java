@@ -10,4 +10,8 @@ import java.util.ArrayList;
 public class Solution {
     private double length;
     private ArrayList<Point> sequence;
+    private int portalsPerSide;
+    private double e;
+    private boolean best;
+    private double[] dimensions;
 }

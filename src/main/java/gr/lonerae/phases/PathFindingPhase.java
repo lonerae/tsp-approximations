@@ -9,6 +9,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.*;
+import java.util.concurrent.*;
 
 import static java.util.Objects.isNull;
 import static java.util.function.Predicate.not;
@@ -18,6 +19,7 @@ public class PathFindingPhase {
 
     private final double squareSize;
     private final int townNumber;
+    private final int timeLimit;
 
     private Point entrance;
     private Point exit;
@@ -46,42 +48,39 @@ public class PathFindingPhase {
     private double currentLength = 0;
     private double bestLength = 0;
 
-    public PathFindingPhase(double squareSize, int townNumber) {
+    public PathFindingPhase(double squareSize, int townNumber, int timeLimit) {
         this.squareSize = squareSize;
         this.townNumber = townNumber;
+        this.timeLimit = timeLimit;
     }
 
     public Solution iterateNodes(QuadtreePhase quadtreePhaseInstance, Map<Point, ArrayList<Point>> clusters, boolean verbose) {
-        for (QuadNode node : quadtreePhaseInstance.getQuadNodes()) {
-            calculateNodePaths(node);
-            iteratedNodes.add(node);
-            calculateParentPortals(node.getParent(), node.getPortals());
-            QuadNode currentParent = node.getParent();
-            currentParent.setTraversed(currentParent.getTraversed() + 1);
-            while (!isNull(currentParent) && currentParent.getTraversed() == 4) {
-                parentPaths(currentParent);
-                List<Segment> segTest = updateSegments();
-                currentParent.setSegments(segTest);
-                for (Segment s : segTest) {
-                    updateSegments(currentParent, s);
-                }
-                iteratedNodes.add(currentParent);
-                if (!isNull(currentParent.getParent())) {
-                    calculateParentPortals(currentParent.getParent(), currentParent.getPortals());
-                    currentParent.getParent().setTraversed(currentParent.getParent().getTraversed() + 1);
-                }
-                currentParent = currentParent.getParent();
+        boolean success = true;
+        try(ExecutorService executor = Executors.newSingleThreadExecutor()) {
+            Future<?> future = executor.submit(new LongRunningTask(quadtreePhaseInstance));
+            try {
+                future.get(this.timeLimit, TimeUnit.MINUTES);
+            } catch (TimeoutException e) {
+                future.cancel(true);
+                success = false;
+                LOGGER.log(Level.INFO, "TIME LIMIT SURPASSED");
+            } catch (Exception e) {
+                success = false;
+            } finally {
+                executor.shutdownNow();
             }
         }
-        calculateTSP();
-        if (!isNull(winner)) {
-            synthesize(winner, clusters);
-            if (verbose) LOGGER.log(Level.INFO,"TOWNS VISITED: {}/{}", visitedTowns, townNumber);
-            double actualTarget = solutionSegments.stream()
-                    .map(segment -> SegmentUtils.euclideanDistance(segment.getStart(), segment.getEnd()))
-                    .reduce(0.0, Double::sum);
-            if (verbose) LOGGER.log(Level.INFO,"LENGTH: {}", actualTarget);
-            return new Solution(actualTarget, points);
+        if (success) {
+            calculateTSP();
+            if (!isNull(winner)) {
+                synthesize(winner, clusters);
+                if (verbose) LOGGER.log(Level.INFO, "TOWNS VISITED: {}/{}", visitedTowns, townNumber);
+                double actualTarget = solutionSegments.stream()
+                        .map(segment -> SegmentUtils.euclideanDistance(segment.getStart(), segment.getEnd()))
+                        .reduce(0.0, Double::sum);
+                if (verbose) LOGGER.log(Level.INFO, "LENGTH: {}", actualTarget);
+                return new Solution(actualTarget, points, 0, 0.0, false, null);
+            }
         }
         return null;
     }
@@ -194,16 +193,16 @@ public class PathFindingPhase {
         if (isNull(clusters)) return;
         for (Map.Entry<Point, ArrayList<Point>> entry : clusters.entrySet()) {
             if (!entry.getValue().isEmpty()) {
-                disconnectClusterSegments(entry);
+                int segmentIndex = disconnectClusterSegments(entry);
                 Point clusterStart = new Point(entry.getKey().getOriginal().getX(), entry.getKey().getOriginal().getY());
                 int clusterStartIndex = points.indexOf(clusterStart);
                 Set<Point> clusterPoints = new HashSet<>(entry.getValue());
-                reconnectClusterSegments(clusterPoints, clusterStartIndex);
+                reconnectClusterSegments(clusterPoints, clusterStartIndex, segmentIndex);
             }
         }
     }
 
-    private void reconnectClusterSegments(Set<Point> clusterPoints, int clusterStartIndex) {
+    private void reconnectClusterSegments(Set<Point> clusterPoints, int clusterStartIndex, int segmentIndex) {
         double best = 0;
         ArrayList<Point> bestOrder = new ArrayList<>();
         for (Set<Point> comb : Sets.combinations(clusterPoints, clusterPoints.size())) {
@@ -219,13 +218,19 @@ public class PathFindingPhase {
             }
         }
         points.addAll(clusterStartIndex +1, bestOrder);
+        ArrayList<Segment> newSegments = new ArrayList<>();
+        for (int i = 0; i < bestOrder.size() - 1; i++) {
+            newSegments.add(new Segment(bestOrder.get(i), bestOrder.get(i+1), false));
+        }
+        solutionSegments.addAll(segmentIndex, newSegments);
         visitedTowns += bestOrder.size();
     }
 
-    private void disconnectClusterSegments(Map.Entry<Point, ArrayList<Point>> entry) {
+    private int disconnectClusterSegments(Map.Entry<Point, ArrayList<Point>> entry) {
         int segmentIndex = (int) solutionSegments.stream().map(Segment::getStart).takeWhile(not(entry.getKey().getOriginal()::equals)).count();
         if (segmentIndex+1 < solutionSegments.size()) solutionSegments.remove(segmentIndex + 1);
         if (segmentIndex < solutionSegments.size()) solutionSegments.remove(segmentIndex);
+        return segmentIndex;
     }
 
     private void addTownToSolution(List<Segment> tsp, int i) {
@@ -531,5 +536,42 @@ public class PathFindingPhase {
         currentLength -= singleSolution.getLast().getLength();
         singleSolution.removeLast();
         pointCount -= node.getPoints().size();
+    }
+
+    class LongRunningTask implements Runnable {
+
+        private QuadtreePhase quadtreePhaseInstance;
+
+        public LongRunningTask(QuadtreePhase quadtreePhaseInstance) {
+            this.quadtreePhaseInstance = quadtreePhaseInstance;
+        }
+
+        @Override
+        public void run() {
+            for (QuadNode node : quadtreePhaseInstance.getQuadNodes()) {
+                calculateNodePaths(node);
+                iteratedNodes.add(node);
+                calculateParentPortals(node.getParent(), node.getPortals());
+                QuadNode currentParent = node.getParent();
+                currentParent.setTraversed(currentParent.getTraversed() + 1);
+                while (!isNull(currentParent) && currentParent.getTraversed() == 4) {
+                    parentPaths(currentParent);
+                    List<Segment> segTest = updateSegments();
+                    currentParent.setSegments(segTest);
+                    for (Segment s : segTest) {
+                        updateSegments(currentParent, s);
+                    }
+                    iteratedNodes.add(currentParent);
+                    if (!isNull(currentParent.getParent())) {
+                        calculateParentPortals(currentParent.getParent(), currentParent.getPortals());
+                        currentParent.getParent().setTraversed(currentParent.getParent().getTraversed() + 1);
+                    }
+                    currentParent = currentParent.getParent();
+                }
+                if(Thread.interrupted()) {
+                    return;
+                }
+            }
+        }
     }
 }

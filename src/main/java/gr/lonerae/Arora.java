@@ -12,12 +12,14 @@ import java.util.Map;
 
 public class Arora {
 
+    private static final int TIME_LIMIT = 3;
+
     private Arora() {}
 
-    public static Solution getInstanceSolution(PreProcessingPhase preProcessingPhaseInstance, int portalsPerNodeSide, List<Point> points, Map<Point, ArrayList<Point>> clusters, boolean verbose) {
+    public static Solution calculate(PreProcessingPhase preProcessingPhaseInstance, int portalsPerNodeSide, List<Point> points, Map<Point, ArrayList<Point>> clusters, boolean verbose) {
         QuadtreePhase quadtreePhaseInstance = new QuadtreePhase(preProcessingPhaseInstance.getSquareSide(), preProcessingPhaseInstance.getPoints(), portalsPerNodeSide);
         quadtreePhaseInstance.assignPortals();
-        PathFindingPhase pathFindingPhase = new PathFindingPhase(preProcessingPhaseInstance.getSquareSide(), points.size());
+        PathFindingPhase pathFindingPhase = new PathFindingPhase(preProcessingPhaseInstance.getSquareSide(), points.size(), TIME_LIMIT);
         return pathFindingPhase.iterateNodes(quadtreePhaseInstance, clusters, verbose);
     }
 }
