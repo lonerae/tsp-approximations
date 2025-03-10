@@ -54,7 +54,7 @@ public class Plotter {
     @AllArgsConstructor
     public static class PlotOptimal extends JFrame {
         private transient List<Point> original;
-        private ArrayList<Integer> indexes;
+        private List<Integer> indexes;
         private double[] dimensions;
 
         @Override

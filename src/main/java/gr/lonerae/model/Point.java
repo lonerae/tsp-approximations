@@ -7,13 +7,30 @@ import lombok.RequiredArgsConstructor;
 import java.util.Objects;
 
 @Data
-@RequiredArgsConstructor
 public class Point {
     private static final double ALMOST_ZERO = 0.000000000001;
 
-    @NonNull private double x;
-    @NonNull private double y;
+    private double x;
+    private double y;
+    private double score = -1;
     private Point original = null;
+
+    public Point(double x, double y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    public Point(double x, double y, double score) {
+        this.x = x;
+        this.y = y;
+        this.score = score;
+    }
+
+    public Point(Point p) {
+        this.x = p.getX();
+        this.y = p.getY();
+        this.score = p.getScore();
+    }
 
     @Override
     public boolean equals(Object o) {

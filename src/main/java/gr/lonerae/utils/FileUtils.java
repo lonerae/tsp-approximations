@@ -11,15 +11,17 @@ import java.util.List;
 import java.util.Objects;
 
 public class FileUtils {
-    private static final String INSTANCE_PATH = "/instances/%s.tsp";
-    private static final String OPTIMAL_PATH = "/instances/%s.opt.tour";
+    private static final String TSP_INSTANCE_PATH = "/instances/TSP/%s.tsp";
+    private static final String TSP_OPTIMAL_PATH = "/instances/TSP/%s.opt.tour";
+
+    private static final String ORIENTEERING_INSTANCE_PATH = "/instances/Orienteering/%s.txt";
 
     private FileUtils() {}
 
-    public static List<Point> readInstance(String instance) {
+    public static List<Point> readTSPInstance(String instance) {
         ArrayList<Point> points = new ArrayList<>();
         try(BufferedReader br = new BufferedReader(new InputStreamReader(
-                Objects.requireNonNull(Main.class.getResourceAsStream(INSTANCE_PATH.formatted(instance)))
+                Objects.requireNonNull(Main.class.getResourceAsStream(TSP_INSTANCE_PATH.formatted(instance)))
         ))) {
             String line = br.readLine();
             while (line != null) {
@@ -33,10 +35,27 @@ public class FileUtils {
         }
     }
 
-    public static ArrayList<Integer> readOptTour(String instance) {
+    public static List<Point> readOrienteeringInstance(String instance) {
+        ArrayList<Point> points = new ArrayList<>();
+        try(BufferedReader br = new BufferedReader(new InputStreamReader(
+                Objects.requireNonNull(Main.class.getResourceAsStream(ORIENTEERING_INSTANCE_PATH.formatted(instance)))
+        ))) {
+            String line = br.readLine();
+            while (line != null) {
+                String[] parts = line.trim().split("\\s+");
+                points.add(new Point(Double.parseDouble(parts[0]), Double.parseDouble(parts[1]), Double.parseDouble(parts[2])));
+                line = br.readLine();
+            }
+            return points;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static List<Integer> readTSPOptTour(String instance) {
         ArrayList<Integer> indexes = new ArrayList<>();
         try(BufferedReader br = new BufferedReader(new InputStreamReader(
-                Objects.requireNonNull(Main.class.getResourceAsStream(OPTIMAL_PATH.formatted(instance))))
+                Objects.requireNonNull(Main.class.getResourceAsStream(TSP_OPTIMAL_PATH.formatted(instance))))
         )) {
             String line = br.readLine();
             while (line != null) {
@@ -44,8 +63,8 @@ public class FileUtils {
                 line = br.readLine();
             }
             return indexes;
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        } catch (Exception e) {
+            return new ArrayList<>();
         }
     }
 }
