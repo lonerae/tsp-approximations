@@ -8,14 +8,11 @@ import java.util.*;
 
 @Getter
 public class PreProcessingPhase {
-
     private List<Point> points;
     private final double e;
     private final int size;
-
     private final Map<Integer, Point> square = new HashMap<>();
     private double squareSide = 0;
-
     private final Map<Point, ArrayList<Point>> clusters = new HashMap<>();
 
     public PreProcessingPhase(List<Point> points, double e) {
@@ -57,7 +54,6 @@ public class PreProcessingPhase {
             square.put(3, new Point(minX.getX(), minY.getY()));
             squareSide = maxDistanceY;
         }
-
         double[] dimensions = new double[2];
         dimensions[0] = maxDistanceX;
         dimensions[1] = maxDistanceY;

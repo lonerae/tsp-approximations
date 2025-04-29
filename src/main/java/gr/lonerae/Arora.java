@@ -11,29 +11,34 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static java.util.Objects.isNull;
+
 public class Arora {
 
-    private static final int TIME_LIMIT = 3;
+    private static final int TIME_LIMIT = 1;
 
     private Arora() {}
 
-    public static Solution calculateWithEndpoints(PreProcessingPhase preProcessingPhaseInstance, int portalsPerNodeSide, List<Point> points, Map<Point, ArrayList<Point>> clusters, boolean verbose, Point start, Point end) {
+    public static Solution calculateWithEndpoints(PreProcessingPhase preProcessingPhaseInstance, int portalsPerNodeSide, List<Point> points, Map<Point, ArrayList<Point>> clusters, boolean verbose, Point start, Point end, int k) {
         QuadtreePhase quadtreePhaseInstance = new QuadtreePhase(preProcessingPhaseInstance.getSquareSide(), preProcessingPhaseInstance.getPoints(), portalsPerNodeSide);
         quadtreePhaseInstance.assignPortals();
         PathFindingPhase pathFindingPhase = new PathFindingPhase(preProcessingPhaseInstance.getSquareSide(), points.size(), TIME_LIMIT);
-        Solution solution = pathFindingPhase.iterateNodes(quadtreePhaseInstance, clusters, verbose, false);
-        solution.getSequence().addFirst(start);
-        solution.getSequence().add(end);
-        solution.setLength(solution.getLength() +
-                SegmentUtils.euclideanDistance(solution.getSequence().getFirst(), solution.getSequence().get(1)) +
-                SegmentUtils.euclideanDistance(solution.getSequence().get(solution.getSequence().size() - 2), solution.getSequence().getLast()));
-        return solution;
+        Map<Integer, Solution> solutions = pathFindingPhase.iterateNodes(quadtreePhaseInstance, clusters, verbose, false, start, end, k);
+//        if (!solutions.isEmpty()) {
+//            solution.getSequence().addFirst(start);
+//            solution.getSequence().add(end);
+//            solution.setLength(solution.getLength() +
+//                    SegmentUtils.euclideanDistance(solution.getSequence().getFirst(), solution.getSequence().get(1)) +
+//                    SegmentUtils.euclideanDistance(solution.getSequence().get(solution.getSequence().size() - 2), solution.getSequence().getLast()));
+//        }
+//        return solutions;
+        return null;
     }
 
-    public static Solution calculate(PreProcessingPhase preProcessingPhaseInstance, int portalsPerNodeSide, List<Point> points, Map<Point, ArrayList<Point>> clusters, boolean verbose) {
+    public static Map<Integer, Solution> calculate(PreProcessingPhase preProcessingPhaseInstance, int portalsPerNodeSide, List<Point> points, Map<Point, ArrayList<Point>> clusters, boolean verbose) {
         QuadtreePhase quadtreePhaseInstance = new QuadtreePhase(preProcessingPhaseInstance.getSquareSide(), preProcessingPhaseInstance.getPoints(), portalsPerNodeSide);
         quadtreePhaseInstance.assignPortals();
         PathFindingPhase pathFindingPhase = new PathFindingPhase(preProcessingPhaseInstance.getSquareSide(), points.size(), TIME_LIMIT);
-        return pathFindingPhase.iterateNodes(quadtreePhaseInstance, clusters, verbose, true);
+        return pathFindingPhase.iterateNodes(quadtreePhaseInstance, clusters, verbose, true, preProcessingPhaseInstance.getPoints().getFirst(), preProcessingPhaseInstance.getPoints().getLast(), preProcessingPhaseInstance.getPoints().size());
     }
 }

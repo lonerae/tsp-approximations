@@ -12,7 +12,9 @@ public class Path {
     private Point entrance;
     private Point exit;
     private double length = 0.0;
-
+    private List<Point> towns = new ArrayList<>();
+    private int townNumber;
+    private QuadNode node;
     private List<Segment> segments = new ArrayList<>();
     private List<Path> inner = new ArrayList<>();
 

@@ -13,11 +13,9 @@ import java.util.List;
 @Getter
 public class QuadtreePhase {
     private final QuadNode root;
-
     private final HashSet<Point> corners = new HashSet<>();
     private final HashSet<Point> portals = new HashSet<>();
     private final ArrayList<QuadNode> quadNodes = new ArrayList<>();
-
     private final int portalsPerNodeSide;
 
     public QuadtreePhase(double squareSide, List<Point> points, int portalsPerNodeSide) {
@@ -34,26 +32,10 @@ public class QuadtreePhase {
     }
 
     private void divideQuadLeaf(QuadNode node) {
-        node.setUpperLeft(new QuadNode());
-        node.getUpperLeft().setParent(node);
-        node.getUpperLeft().setLowerLeftCorner(new Point(node.getLowerLeftCorner().getX(), node.getLowerLeftCorner().getY() + node.getSide() / 2));
-        node.getUpperLeft().setSide(node.getSide() / 2);
-
-        node.setUpperRight(new QuadNode());
-        node.getUpperRight().setParent(node);
-        node.getUpperRight().setLowerLeftCorner(new Point(node.getLowerLeftCorner().getX() + node.getSide() / 2, node.getLowerLeftCorner().getY() + node.getSide() / 2));
-        node.getUpperRight().setSide(node.getSide() / 2);
-
-        node.setLowerRight(new QuadNode());
-        node.getLowerRight().setParent(node);
-        node.getLowerRight().setLowerLeftCorner(new Point(node.getLowerLeftCorner().getX() + node.getSide() / 2, node.getLowerLeftCorner().getY()));
-        node.getLowerRight().setSide(node.getSide() / 2);
-
-        node.setLowerLeft(new QuadNode());
-        node.getLowerLeft().setParent(node);
-        node.getLowerLeft().setLowerLeftCorner(new Point(node.getLowerLeftCorner().getX(), node.getLowerLeftCorner().getY()));
-        node.getLowerLeft().setSide(node.getSide() / 2);
-
+        node.setUpperLeft(makeChild(node, true, true));
+        node.setUpperRight(makeChild(node, false, true));
+        node.setLowerRight(makeChild(node, false, false));
+        node.setLowerLeft(makeChild(node, true, false));
         for (Point p : node.getPoints()) {
             boolean left = p.getX() < node.getLowerLeftCorner().getX() + node.getSide() / 2;
             boolean up = p.getY() > node.getLowerLeftCorner().getY() + node.getSide() / 2;
@@ -62,20 +44,28 @@ public class QuadtreePhase {
 
             assignPointsToNode(node, p, leftLimit, up, upLimit, left);
         }
-
         finalizeNodePointsOrDivide(node);
+    }
+
+    private QuadNode makeChild(QuadNode parent, boolean left, boolean up) {
+        QuadNode child = new QuadNode();
+        child.setParent(parent);
+        child.setLowerLeftCorner(new Point(
+                left ? parent.getLowerLeftCorner().getX() : parent.getLowerLeftCorner().getX() + parent.getSide() / 2,
+                up ? parent.getLowerLeftCorner().getY() + parent.getSide() / 2 : parent.getLowerLeftCorner().getY()
+        ));
+        child.setSide(parent.getSide() / 2);
+        return child;
     }
 
     private static void assignPointsToNode(QuadNode node, Point p, boolean leftLimit, boolean up, boolean upLimit, boolean left) {
         if (leftLimit) {
             if (up) node.getUpperLeft().getPoints().add(p);
             else node.getLowerRight().getPoints().add(p);
-        }
-        else if (upLimit) {
+        } else if (upLimit) {
             if (left) node.getUpperLeft().getPoints().add(p);
             else node.getUpperRight().getPoints().add(p);
-        }
-        else if (left && up) node.getUpperLeft().getPoints().add(p);
+        } else if (left && up) node.getUpperLeft().getPoints().add(p);
         else if (!left && up) node.getUpperRight().getPoints().add(p);
         else if (!left) node.getLowerRight().getPoints().add(p);
         else node.getLowerLeft().getPoints().add(p);
@@ -126,10 +116,7 @@ public class QuadtreePhase {
                 (!corners.contains(portal) && !portals.contains(portal))
         ) return;
         if (portals.contains(portal) && !node.getPortals().contains(portal)) node.getPortals().add(portal);
-        else {
-            calculateAlternativePortalSelections(portal, node, depth);
-        }
-
+        else calculateAlternativePortalSelections(portal, node, depth);
     }
 
     private void calculateAlternativePortalSelections(Point portal, QuadNode node, int depth) {

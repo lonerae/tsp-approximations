@@ -25,22 +25,23 @@ public class Main {
 
     private static Map<String, Integer> initializeTSPInstances() {
         Map<String, Integer> solvedInstances = new HashMap<>();
-        solvedInstances.put("a280", 2579);
-        solvedInstances.put("berlin52", 7542);
-        solvedInstances.put("ch130", 6110);
-        solvedInstances.put("ch150", 6528);
-        solvedInstances.put("eil101", 629);
-        solvedInstances.put("kroA100", 21282);
-        solvedInstances.put("kroA150", 26524);
-        solvedInstances.put("kroA200", 29368);
-        solvedInstances.put("kroC100", 20749);
-        solvedInstances.put("kroD100", 21294);
-        solvedInstances.put("kroE100", 22068);
-        solvedInstances.put("lin105", 14379);
-        solvedInstances.put("pr144", 58537);
-        solvedInstances.put("pr76", 108159);
-        solvedInstances.put("rat195", 2323);
-        solvedInstances.put("st70", 675);
+//        solvedInstances.put("a280", 2579);
+//        solvedInstances.put("berlin52", 7542);
+//        solvedInstances.put("ch130", 6110);
+//        solvedInstances.put("ch150", 6528);
+//        solvedInstances.put("eil101", 629);
+//        solvedInstances.put("kroA100", 21282);
+//        solvedInstances.put("kroA150", 26524);
+//        solvedInstances.put("kroA200", 29368);
+//        solvedInstances.put("kroC100", 20749);
+//        solvedInstances.put("kroD100", 21294);
+//        solvedInstances.put("kroE100", 22068);
+//        solvedInstances.put("lin105", 14379);
+//        solvedInstances.put("pr144", 58537);
+//        solvedInstances.put("pr76", 108159);
+//        solvedInstances.put("rat195", 2323);
+//        solvedInstances.put("st70", 675);
+        solvedInstances.put("test", 0);
         return solvedInstances;
     }
 
@@ -118,18 +119,21 @@ public class Main {
         List<Integer> opt = FileUtils.readTSPOptTour(entry.getKey());
 
         if (isTSP) {
-            Solution res = null;
+            Map<Integer, Solution> res = null;
             for (double e : eValues) {
                 res = solveInstanceForChosenE(portalsPerNodeSide, e, points, res);
             }
-            if (!isNull(res)) {
-                double optimal = solvedInstances.get(entry.getKey());
-                LOGGER.log(Level.INFO, "OPTIMAL: {}", optimal);
-                double performance = -1 * CommonUtils.round((res.getLength() - optimal) * 100 / optimal);
-                avgPerfomance += performance;
-                LOGGER.log(Level.INFO, "PERFORMANCE: {}%", performance);
-                LOGGER.log(Level.INFO, "BEST SOLUTION: {}%", res.getLength());
-                plotGraphs(entry.getKey(), res, res.getDimensions(), original, opt, res.getE(), res.getPortalsPerSide());
+            if (!isNull(res) && !res.isEmpty()) {
+//                double optimal = solvedInstances.get(entry.getKey());
+//                LOGGER.log(Level.INFO, "OPTIMAL: {}", optimal);
+//                double performance = -1 * CommonUtils.round((res.getLength() - optimal) * 100 / optimal);
+//                avgPerfomance += performance;
+//                LOGGER.log(Level.INFO, "PERFORMANCE: {}%", performance);
+//                LOGGER.log(Level.INFO, "BEST SOLUTION: {}%", res.getLength());
+//                plotGraphs(entry.getKey(), res, res.getDimensions(), original, opt, res.getE(), res.getPortalsPerSide());
+//                for (Solution s : res.values()) {
+                    plotGraphs(entry.getKey(), res.get(4), res.get(4).getDimensions(), original, opt, 1.0, 0);
+//                }
             }
             return avgPerfomance;
         } else {
@@ -138,7 +142,7 @@ public class Main {
         }
     }
 
-    private static Solution solveInstanceForChosenE(List<Integer> portalsPerNodeSide, double e, List<Point> points, Solution res) {
+    private static Map<Integer, Solution> solveInstanceForChosenE(List<Integer> portalsPerNodeSide, double e, List<Point> points, Map<Integer, Solution> res) {
         double[] dimensions;
         LOGGER.log(Level.INFO, "E: {}", e);
         List<Point> pointsCopy = new ArrayList<>();
@@ -150,24 +154,26 @@ public class Main {
 
         for (int portals : portalsPerNodeSide) {
             res = solveInstanceForChosenEAndPortalsPerSide(e, points, res, portals, preProcessingPhaseInstance);
-            res.setDimensions(dimensions);
-            if (res.isBest()) break;
+            for (Solution solution : res.values()) {
+                solution.setDimensions(dimensions);
+//            if (res.isBest()) break;
+            }
         }
         return res;
     }
 
-    private static Solution solveInstanceForChosenEAndPortalsPerSide(double e, List<Point> points, Solution res, int portals, PreProcessingPhase preProcessingPhaseInstance) {
+    private static Map<Integer, Solution> solveInstanceForChosenEAndPortalsPerSide(double e, List<Point> points, Map<Integer, Solution> res, int portals, PreProcessingPhase preProcessingPhaseInstance) {
         LOGGER.log(Level.INFO, "PORTALS: {}", portals);
-        Solution currentRes = Arora.calculate(preProcessingPhaseInstance, portals, points, preProcessingPhaseInstance.getClusters(), true);
-        if (isNull(currentRes)) {
-            res.setBest(true);
-            return res;
-        } else {
-            currentRes.setPortalsPerSide(portals);
-            currentRes.setE(e);
-        }
-        if (isNull(res) || res.getLength() > currentRes.getLength()) res = currentRes;
-        return res;
+        Map<Integer, Solution> currentRes = Arora.calculate(preProcessingPhaseInstance, portals, points, preProcessingPhaseInstance.getClusters(), true);
+//        if (isNull(currentRes)) {
+//            res.setBest(true);
+//            return res;
+//        } else {
+//            currentRes.setPortalsPerSide(portals);
+//            currentRes.setE(e);
+//        }
+//        if (isNull(res) || res.getLength() > currentRes.getLength()) res = currentRes;
+        return currentRes;
     }
 
     private static void plotGraphs(String key, Solution res, double[] dimensions, List<Point> original, List<Integer> opt, Double e, Integer portalsPerNodeSide) {

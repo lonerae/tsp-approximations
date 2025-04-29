@@ -7,7 +7,7 @@ import lombok.RequiredArgsConstructor;
 import java.util.Objects;
 
 @Data
-public class Point {
+public class Point implements Comparable<Point> {
     private static final double ALMOST_ZERO = 0.000000000001;
 
     private double x;
@@ -47,5 +47,11 @@ public class Point {
     @Override
     public String toString() {
         return "(" + x + "," + y + ")";
+    }
+
+    @Override
+    public int compareTo(Point other) {
+        if (x == other.x) return (int) (y - other.y);
+        return (int) (x - other.x);
     }
 }

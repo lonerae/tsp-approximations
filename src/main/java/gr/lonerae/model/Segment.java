@@ -15,6 +15,8 @@ public class Segment {
 
     private List<Path> inner = new ArrayList<>();
     private Point town;
+    private List<Point> towns =  new ArrayList<>();
+    private int townNumber = 0;
 
     public Segment(Point start, Point end, boolean ordered) {
         if (ordered) {
@@ -27,12 +29,21 @@ public class Segment {
         }
     }
 
+    public void traverseTown(Point town) {
+        this.townNumber++;
+        this.towns.add(town);
+    }
+
     @Override
     public String toString() {
-        if (isNull(town) || town.equals(start) || town.equals(end)) {
+        if (towns.isEmpty()) {
             return start + " -> " + end;
         } else {
-            return start + " -> T" + town + " -> " + end;
+            StringBuilder builder = new StringBuilder();
+            for (Point town : towns) {
+                if (!town.equals(start) && !town.equals(end)) builder.append(" -> ").append('T').append(town);
+            }
+            return start + builder.toString() + " -> " + end;
         }
 
     }

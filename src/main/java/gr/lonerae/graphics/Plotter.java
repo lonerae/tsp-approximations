@@ -43,9 +43,9 @@ public class Plotter {
                 town = new Ellipse2D.Double(points.get(i+1).getX() - r/2, points.get(i+1).getY() + headerHeight - r/2, r, r);
                 g.fill(town);
             }
-            g.setColor(Color.BLACK);
-            g.draw(new Line2D.Double(points.getLast().getX(), points.getLast().getY() + headerHeight,
-                    points.getFirst().getX(), points.getFirst().getY() + headerHeight));
+//            g.setColor(Color.BLACK);
+//            g.draw(new Line2D.Double(points.getLast().getX(), points.getLast().getY() + headerHeight,
+//                    points.getFirst().getX(), points.getFirst().getY() + headerHeight));
 
 
         }

@@ -25,11 +25,12 @@ public class QuadNode {
     private QuadNode lowerLeft;
     private QuadNode lowerRight;
 
-    public Segment getSegment(Point start, Point end) {
+    public List<Segment> getSegment(Point start, Point end) {
+        List<Segment> segments = new ArrayList<>();
         for (Segment segment : segmentsByEntrance.get(start)) {
-            if (segment.getStart().equals(end) || segment.getEnd().equals(end)) return segment;
+            if (segment.getStart().equals(end) || segment.getEnd().equals(end)) segments.add(segment);
         }
-        return null;
+        return segments;
     }
 
     @Override
