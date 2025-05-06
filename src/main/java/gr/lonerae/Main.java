@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static java.util.Objects.isNull;
 
@@ -80,7 +81,7 @@ public class Main {
         return portalsPerNodeSide;
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         if (args.length == 0) return;
 
         Map<String, Integer> solvedInstances;
@@ -104,7 +105,7 @@ public class Main {
         }
     }
 
-    private static double solveInstance(Map.Entry<String, Integer> entry, List<Double> eValues, List<Integer> portalsPerNodeSide, Map<String, Integer> solvedInstances, double avgPerfomance) {
+    private static double solveInstance(Map.Entry<String, Integer> entry, List<Double> eValues, List<Integer> portalsPerNodeSide, Map<String, Integer> solvedInstances, double avgPerfomance) throws InterruptedException {
         LOGGER.log(Level.INFO, "********************");
         LOGGER.log(Level.INFO, "INSTANCE: {}", entry.getKey());
 
@@ -113,10 +114,7 @@ public class Main {
         else points = FileUtils.readOrienteeringInstance(entry.getKey());
 
         List<Point> original = new ArrayList<>();
-        for (Point point : points) {
-            original.add(new Point(point.getX(), point.getY()));
-        }
-        List<Integer> opt = FileUtils.readTSPOptTour(entry.getKey());
+        for (Point point : points) original.add(new Point(point.getX(), point.getY()));
 
         if (isTSP) {
             Map<Integer, Solution> res = null;
@@ -124,16 +122,10 @@ public class Main {
                 res = solveInstanceForChosenE(portalsPerNodeSide, e, points, res);
             }
             if (!isNull(res) && !res.isEmpty()) {
-//                double optimal = solvedInstances.get(entry.getKey());
-//                LOGGER.log(Level.INFO, "OPTIMAL: {}", optimal);
-//                double performance = -1 * CommonUtils.round((res.getLength() - optimal) * 100 / optimal);
-//                avgPerfomance += performance;
-//                LOGGER.log(Level.INFO, "PERFORMANCE: {}%", performance);
-//                LOGGER.log(Level.INFO, "BEST SOLUTION: {}%", res.getLength());
-//                plotGraphs(entry.getKey(), res, res.getDimensions(), original, opt, res.getE(), res.getPortalsPerSide());
-//                for (Solution s : res.values()) {
-                    plotGraphs(entry.getKey(), res.get(4), res.get(4).getDimensions(), original, opt, 1.0, 0);
-//                }
+                for (Solution kTspSolution : res.values()) {
+                    plotGraphs(entry.getKey(), kTspSolution, original, kTspSolution.getE(), kTspSolution.getPortalsPerSide());
+                    TimeUnit.SECONDS.sleep(1);
+                }
             }
             return avgPerfomance;
         } else {
@@ -176,17 +168,10 @@ public class Main {
         return currentRes;
     }
 
-    private static void plotGraphs(String key, Solution res, double[] dimensions, List<Point> original, List<Integer> opt, Double e, Integer portalsPerNodeSide) {
-        Plotter.PlotSolution plotSolution = new Plotter.PlotSolution(res.getSequence(), dimensions);
+    private static void plotGraphs(String key, Solution res, List<Point> original, Double e, Integer portalsPerNodeSide) {
+        Plotter.PlotSolution plotSolution = new Plotter.PlotSolution(res.getSequence(), res.getDimensions());
         plotSolution.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
         plotSolution.setVisible(true);
         plotSolution.setTitle("instance: " + key + ", e: " + e + ", portals: " + portalsPerNodeSide);
-
-        if (!opt.isEmpty()) {
-            Plotter.PlotOptimal plotOptimal = new Plotter.PlotOptimal(original, opt, dimensions);
-            plotOptimal.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-            plotOptimal.setVisible(true);
-            plotOptimal.setTitle(key + " optimal");
-        }
     }
 }

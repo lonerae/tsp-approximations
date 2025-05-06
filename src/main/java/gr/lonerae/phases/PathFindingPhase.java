@@ -2,6 +2,7 @@ package gr.lonerae.phases;
 
 import com.google.common.collect.Sets;
 import gr.lonerae.model.*;
+import gr.lonerae.phases.helper.PathFinder;
 import gr.lonerae.utils.PointUtils;
 import gr.lonerae.utils.SegmentUtils;
 import org.apache.logging.log4j.Level;
@@ -32,7 +33,7 @@ public class PathFindingPhase {
     private Point end;
     private int townsGoal;
     private Point lead = null;
-    private final ArrayList<Segment> solutionSegments = new ArrayList<>();
+    private ArrayList<Segment> solutionSegments = new ArrayList<>();
     private final ArrayList<Point> onLinePoints = new ArrayList<>();
     private List<Segment> tempSolution = new ArrayList<>();
     private HashMap<Integer, Path> solutionMap = new HashMap<>();
@@ -89,8 +90,9 @@ public class PathFindingPhase {
 
     private void transformSolutions(boolean verbose, Map<Integer, Solution> kTspSolutions) {
         for (Path solution : winners) {
-            lead = null;
+            solutionSegments = new ArrayList<>();
             ArrayList<Point> sequence = new ArrayList<>();
+            lead = null;
             double length = 0;
             Segment currentSegment = null;
             for (Segment s : solution.getSegments()) {
@@ -103,11 +105,12 @@ public class PathFindingPhase {
                         } else {
                             addOnLinePoints(sequence);
                             Segment candidateSegment = new Segment(sequence.getLast(), town.getOriginal(), false);
-                            postProcessing(candidateSegment);
+                            postProcessing(candidateSegment, sequence);
                             sequence.add(town.getOriginal());
                         }
                     }
                 }
+                //        explodeClusters(clusters); ???
             }
             assignLengthToSolution(verbose, kTspSolutions, sequence, length);
         }
@@ -171,11 +174,11 @@ public class PathFindingPhase {
             }
             if (!sequence.isEmpty()) {
                 Segment candidateSegment = new Segment(sequence.getLast(), onLinePoints.getFirst(), false);
-                postProcessing(candidateSegment);
+                postProcessing(candidateSegment, sequence);
             }
             for (int i = 0; i < onLinePoints.size() - 1; i++) {
                 Segment candidateSegment = new Segment(onLinePoints.get(i), onLinePoints.get(i+1), false);
-                postProcessing(candidateSegment);
+                postProcessing(candidateSegment, sequence);
                 sequence.add(onLinePoints.get(i));
             }
             sequence.add(onLinePoints.getLast());
@@ -235,7 +238,7 @@ public class PathFindingPhase {
             for (Segment segment : tempSolution) {
                 path.addSegment(segment);
                 path.addLength(segment.getLength());
-                townNumber2 += segment.getTownNumber();
+                townNumber2 += segment.getTowns().size();
             }
             if (isNull(solutionMap.get(townNumber2))) solutionMap.put(townNumber2, path);
             else if (solutionMap.get(townNumber2).getLength() > path.getLength()) solutionMap.replace(townNumber2, path);
@@ -243,42 +246,6 @@ public class PathFindingPhase {
             townsGoal += nextSegment.getTownNumber();
         }
     }
-
-//    private void synthesize(List<Segment> tsp, Map<Point, ArrayList<Point>> clusters, boolean isTour) {
-//        int count = 1;
-//        if (!isNull(tsp.getFirst().getTown())) {
-//            points.add(tsp.getFirst().getTown().getOriginal());
-//            visitedTowns++;
-//        }
-//        Point current = tsp.getFirst().getEnd();
-//        int currentIndex = 0;
-//        while (count < tsp.size()) {
-//            int i = 0;
-//            while (i < tsp.size()) {
-//                if (i != currentIndex) {
-//                    if (tsp.get(i).getStart().equals(current)) {
-//                        addTownToSolution(tsp, i);
-//                        current = tsp.get(i).getEnd();
-//                        currentIndex = i;
-//                        count++;
-//                        break;
-//                    } else if (tsp.get(i).getEnd().equals(current)) {
-//                        addTownToSolution(tsp, i);
-//                        current = tsp.get(i).getStart();
-//                        currentIndex = i;
-//                        count++;
-//                        break;
-//                    }
-//                }
-//                i++;
-//            }
-//        }
-//        addOnLinePoints();
-//        if (isTour) {
-//            postProcessing(new Segment(points.getLast(), points.getFirst(), false));
-//        }
-//        explodeClusters(clusters);
-//    }
 
     private void explodeClusters(Map<Point, ArrayList<Point>> clusters) {
         if (isNull(clusters)) return;
@@ -324,7 +291,7 @@ public class PathFindingPhase {
         return segmentIndex;
     }
 
-    private void postProcessing(Segment candidateSegment) {
+    private void postProcessing(Segment candidateSegment, List<Point> sequence) {
         ArrayList<Integer> toBeDeleted = new ArrayList<>();
         ArrayList<Segment> toBeReplaced = new ArrayList<>();
         ArrayList<Integer> toBeDominated = new ArrayList<>();
@@ -350,7 +317,7 @@ public class PathFindingPhase {
             replaceIndex++;
         }
         solutionSegments.addAll(toBeAdded);
-        if (toBeDeleted.isEmpty() && dominated == 0 && !points.isEmpty()) solutionSegments.add(candidateSegment);
+        if (toBeDeleted.isEmpty() && dominated == 0 && !sequence.isEmpty()) solutionSegments.add(candidateSegment);
     }
 
     private void handleIntersected(Segment candidateSegment, Segment segment, ArrayList<Integer> toBeDeleted, ArrayList<Segment> toBeReplaced) {

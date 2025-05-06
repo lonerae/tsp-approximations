@@ -12,7 +12,6 @@ public class Point implements Comparable<Point> {
 
     private double x;
     private double y;
-    private double score = -1;
     private Point original = null;
 
     public Point(double x, double y) {
@@ -20,16 +19,10 @@ public class Point implements Comparable<Point> {
         this.y = y;
     }
 
-    public Point(double x, double y, double score) {
-        this.x = x;
-        this.y = y;
-        this.score = score;
-    }
-
     public Point(Point p) {
         this.x = p.getX();
         this.y = p.getY();
-        this.score = p.getScore();
+        this.original = p.getOriginal();
     }
 
     @Override

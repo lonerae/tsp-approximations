@@ -11,10 +11,12 @@ import static java.util.Objects.isNull;
 public class Path {
     private Point entrance;
     private Point exit;
-    private double length = 0.0;
-    private List<Point> towns = new ArrayList<>();
-    private int townNumber;
+
     private QuadNode node;
+    private double length = 0.0;
+
+    private List<Point> towns = new ArrayList<>();
+
     private List<Segment> segments = new ArrayList<>();
     private List<Path> inner = new ArrayList<>();
 
@@ -23,8 +25,10 @@ public class Path {
     }
 
     public void addLength(double addition) {
-        this.length += addition;
+        length += addition;
     }
+
+    public int getTownNumber() {return towns.size();}
 
     @Override
     public boolean equals(Object o) {
@@ -34,10 +38,15 @@ public class Path {
     }
 
     @Override
+    public int hashCode() {
+        return Objects.hash(getEntrance(), getExit(), getTowns());
+    }
+
+    @Override
     public String toString() {
         StringBuilder stringBuilder = new StringBuilder();
         Point stitch = SegmentUtils.contains(segments.getFirst(), entrance);
-        if (isNull(stitch)) return null;
+        if (isNull(stitch)) return "";
         stringBuilder.append(entrance).append(" -> ").append(stitch);
         if (segments.size() > 1) {
             for (int i = 1; i < segments.size(); i++) {

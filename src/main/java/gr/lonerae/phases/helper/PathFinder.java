@@ -1,9 +1,10 @@
-package gr.lonerae.phases;
+package gr.lonerae.phases.helper;
 
 import gr.lonerae.model.Path;
 import gr.lonerae.model.Point;
 import gr.lonerae.model.QuadNode;
 import gr.lonerae.model.Segment;
+import gr.lonerae.phases.QuadtreePhase;
 import gr.lonerae.utils.QuadTreeUtils;
 import gr.lonerae.utils.SegmentUtils;
 
@@ -107,7 +108,6 @@ public class PathFinder implements Runnable {
         }
     }
 
-
     private void parentPaths(QuadNode parent) {
         this.parent = parent;
         List<Point> parentPortals = parent.getPortals();
@@ -185,7 +185,6 @@ public class PathFinder implements Runnable {
         for (Segment p : singleSolution) {
             solution.addLength(p.getLength());
             solution.addSegment(p);
-            solution.setTownNumber(solution.getTownNumber() + p.getTownNumber());
             if (!isNull(p.getTown())) solution.getTowns().add(p.getTown());
             if (!p.getInner().isEmpty()) {
                 solution.getInner().add(p.getInner().stream().distinct().toList().getFirst());
@@ -224,7 +223,6 @@ public class PathFinder implements Runnable {
         for (Path path : solutions) {
             Segment newSegment = new Segment(path.getEntrance(), path.getExit(), true);
             newSegment.setLength(path.getLength());
-            newSegment.setTownNumber(path.getTownNumber());
             newSegment.getTowns().addAll(path.getTowns());
             dive(path, newSegment);
             boolean distinct = true;

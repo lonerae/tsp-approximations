@@ -5,13 +5,10 @@ import gr.lonerae.model.Solution;
 import gr.lonerae.phases.PathFindingPhase;
 import gr.lonerae.phases.PreProcessingPhase;
 import gr.lonerae.phases.QuadtreePhase;
-import gr.lonerae.utils.SegmentUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-
-import static java.util.Objects.isNull;
 
 public class Arora {
 
@@ -20,9 +17,9 @@ public class Arora {
     private Arora() {}
 
     public static Solution calculateWithEndpoints(PreProcessingPhase preProcessingPhaseInstance, int portalsPerNodeSide, List<Point> points, Map<Point, ArrayList<Point>> clusters, boolean verbose, Point start, Point end, int k) {
-        QuadtreePhase quadtreePhaseInstance = new QuadtreePhase(preProcessingPhaseInstance.getSquareSide(), preProcessingPhaseInstance.getPoints(), portalsPerNodeSide);
+        QuadtreePhase quadtreePhaseInstance = new QuadtreePhase(preProcessingPhaseInstance.getBoundingBoxSize(), preProcessingPhaseInstance.getTowns(), portalsPerNodeSide);
         quadtreePhaseInstance.assignPortals();
-        PathFindingPhase pathFindingPhase = new PathFindingPhase(preProcessingPhaseInstance.getSquareSide(), points.size(), TIME_LIMIT);
+        PathFindingPhase pathFindingPhase = new PathFindingPhase(preProcessingPhaseInstance.getBoundingBoxSize(), points.size(), TIME_LIMIT);
         Map<Integer, Solution> solutions = pathFindingPhase.iterateNodes(quadtreePhaseInstance, clusters, verbose, false, start, end, k);
 //        if (!solutions.isEmpty()) {
 //            solution.getSequence().addFirst(start);
@@ -36,9 +33,9 @@ public class Arora {
     }
 
     public static Map<Integer, Solution> calculate(PreProcessingPhase preProcessingPhaseInstance, int portalsPerNodeSide, List<Point> points, Map<Point, ArrayList<Point>> clusters, boolean verbose) {
-        QuadtreePhase quadtreePhaseInstance = new QuadtreePhase(preProcessingPhaseInstance.getSquareSide(), preProcessingPhaseInstance.getPoints(), portalsPerNodeSide);
+        QuadtreePhase quadtreePhaseInstance = new QuadtreePhase(preProcessingPhaseInstance.getBoundingBoxSize(), preProcessingPhaseInstance.getTowns(), portalsPerNodeSide);
         quadtreePhaseInstance.assignPortals();
-        PathFindingPhase pathFindingPhase = new PathFindingPhase(preProcessingPhaseInstance.getSquareSide(), points.size(), TIME_LIMIT);
-        return pathFindingPhase.iterateNodes(quadtreePhaseInstance, clusters, verbose, true, preProcessingPhaseInstance.getPoints().getFirst(), preProcessingPhaseInstance.getPoints().getLast(), preProcessingPhaseInstance.getPoints().size());
+        PathFindingPhase pathFindingPhase = new PathFindingPhase(preProcessingPhaseInstance.getBoundingBoxSize(), points.size(), TIME_LIMIT);
+        return pathFindingPhase.iterateNodes(quadtreePhaseInstance, clusters, verbose, true, preProcessingPhaseInstance.getTowns().getFirst(), preProcessingPhaseInstance.getTowns().getLast(), preProcessingPhaseInstance.getTowns().size());
     }
 }
