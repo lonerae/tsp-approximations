@@ -7,6 +7,7 @@ import gr.lonerae.model.Segment;
 import gr.lonerae.phases.QuadtreePhase;
 import gr.lonerae.utils.QuadTreeUtils;
 import gr.lonerae.utils.SegmentUtils;
+import gr.lonerae.utils.constants.GeneralConstants;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,15 +26,19 @@ public class PathFinder implements Runnable {
     private final List<Segment> singleSolution = new ArrayList<>();
     private final List<Path> solutions = new ArrayList<>();
 
+    private Point start;
+    private Point end;
     private Point entrance;
     private Point exit;
     private double currentLength = 0;
     private double bestLength = 0;
 
-    public PathFinder(QuadtreePhase quadtreePhaseInstance, List<QuadNode> iteratedNodes, Map<Point, List<Path>> result) {
+    public PathFinder(QuadtreePhase quadtreePhaseInstance, List<QuadNode> iteratedNodes, Map<Point, List<Path>> result, Point start, Point end) {
         this.quadtreePhaseInstance = quadtreePhaseInstance;
         this.iteratedNodes = iteratedNodes;
         this.result = result;
+        this.start = start;
+        this.end = end;
     }
 
     @Override
@@ -92,11 +97,11 @@ public class PathFinder implements Runnable {
     private void calculateNodePaths(QuadNode node) {
         for (int i = 0; i < node.getPortals().size() - 1; i++) {
             for (int j = i + 1; j < node.getPortals().size(); j++) {
-                if (node.getPoints().size() == 1) {
+                if (node.getTowns().size() == 1) {
                     Segment segmentWithTown = new Segment(node.getPortals().get(i), node.getPortals().get(j), true);
-                    segmentWithTown.setLength(SegmentUtils.getPathLengthThroughPoint(segmentWithTown, node.getPoints().getFirst()));
-                    segmentWithTown.setTown(node.getPoints().getFirst());
-                    segmentWithTown.traverseTown(node.getPoints().getFirst());
+                    segmentWithTown.setLength(SegmentUtils.getPathLengthThroughPoint(segmentWithTown, node.getTowns().getFirst()));
+                    segmentWithTown.setTown(node.getTowns().getFirst());
+                    segmentWithTown.traverseTown(node.getTowns().getFirst());
                     node.getSegments().add(segmentWithTown);
                     updateSegments(node, segmentWithTown);
                 }
@@ -111,12 +116,7 @@ public class PathFinder implements Runnable {
     private void parentPaths(QuadNode parent) {
         this.parent = parent;
         List<Point> parentPortals = parent.getPortals();
-        ArrayList<QuadNode> children = new ArrayList<>(List.of(
-                parent.getUpperLeft(),
-                parent.getUpperRight(),
-                parent.getLowerRight(),
-                parent.getLowerLeft()
-        ));
+        ArrayList<QuadNode> children = new ArrayList<>(parent.getChildren().values());
         for (int i = 0; i < parentPortals.size() - 1; i++) {
             entrance = parentPortals.get(i);
             for (int j = i + 1; j < parentPortals.size(); j++) {
@@ -229,11 +229,23 @@ public class PathFinder implements Runnable {
             List<Segment> toAdd = new ArrayList<>();
             List<Segment> toDelete = new ArrayList<>();
             for (Segment segment : segments) {
-                Collections.sort(segment.getTowns());
-                Collections.sort(newSegment.getTowns());
-                if (SegmentUtils.commonEdges(newSegment, segment) && segment.getTowns().equals(newSegment.getTowns())) {
+                if (
+                        SegmentUtils.commonEdges(newSegment, segment) &&
+                        segment.getTowns().size() == newSegment.getTowns().size()
+                ) {
                     distinct = false;
-                    if (segment.getLength() > newSegment.getLength()) {
+                    if (
+                            ((!segment.getTowns().contains(start) && !newSegment.getTowns().contains(start)) || (segment.getTowns().contains(start) && newSegment.getTowns().contains(start))) &&
+                            ((!segment.getTowns().contains(end) && !newSegment.getTowns().contains(end)) || (segment.getTowns().contains(end) && newSegment.getTowns().contains(end)))
+                    ) {
+                        if (segment.getLength() > newSegment.getLength()) {
+                            toDelete.add(segment);
+                            toAdd.add(newSegment);
+                        }
+                    } else if (
+                            (!segment.getTowns().contains(start) && newSegment.getTowns().contains(start)) ||
+                            (!segment.getTowns().contains(end) && newSegment.getTowns().contains(end))
+                    ) {
                         toDelete.add(segment);
                         toAdd.add(newSegment);
                     }

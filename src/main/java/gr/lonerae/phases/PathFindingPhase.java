@@ -3,6 +3,7 @@ package gr.lonerae.phases;
 import com.google.common.collect.Sets;
 import gr.lonerae.model.*;
 import gr.lonerae.phases.helper.PathFinder;
+import gr.lonerae.utils.CommonUtils;
 import gr.lonerae.utils.PointUtils;
 import gr.lonerae.utils.SegmentUtils;
 import org.apache.logging.log4j.Level;
@@ -49,14 +50,14 @@ public class PathFindingPhase {
                                  boolean verbose,
                                  boolean isTour,
                                  Point start, Point end, int k) {
+        this.start = start;
+        this.end = end;
         boolean success = true;
         success = calculateQuadNodePaths(quadtreePhaseInstance, success);
         if (success) {
-            this.start = start;
-            this.end = end;
             this.townsGoal = k;
             ArrayList<QuadNode> unvisitedNodes = new ArrayList<>(iteratedNodes.stream().filter(node -> node.getSide() == squareSize / 2).toList());
-            QuadNode origin = unvisitedNodes.stream().filter(node -> node.getPoints().contains(this.start)).findFirst().orElseThrow();
+            QuadNode origin = unvisitedNodes.stream().filter(node -> node.getTowns().contains(this.start)).findFirst().orElseThrow();
             unvisitedNodes.remove(origin);
             solveKTSP(origin, unvisitedNodes);
             winners.addAll(solutionMap.values());
@@ -71,7 +72,7 @@ public class PathFindingPhase {
 
     private boolean calculateQuadNodePaths(QuadtreePhase quadtreePhaseInstance, boolean success) {
         try(ExecutorService executor = Executors.newSingleThreadExecutor()) {
-            Future<?> future = executor.submit(new PathFinder(quadtreePhaseInstance, iteratedNodes, result));
+            Future<?> future = executor.submit(new PathFinder(quadtreePhaseInstance, iteratedNodes, result, start, end));
             try {
                 future.get(this.timeLimit, TimeUnit.MINUTES);
             } catch (TimeoutException e) {
@@ -198,10 +199,12 @@ public class PathFindingPhase {
             if (node.getPortals().contains(stitch)) {
                 copyOfUnvisitedNodes.remove(node);
                 for (Segment nextSegment : node.getSegments().stream().filter(s -> s.getStart().equals(stitch) || s.getEnd().equals(stitch)).toList()) {
-                    if (townsGoal - nextSegment.getTownNumber() < 1) continue;
+                    // TODO
+                    // if (townsGoal - nextSegment.getTownNumber() < 1) continue;
                     townsGoal -= nextSegment.getTownNumber();
                     tempSolution.add(nextSegment);
-                    traverseNodes(nextSegment.getStart().equals(stitch) ? nextSegment.getEnd() : nextSegment.getStart(), copyOfUnvisitedNodes);
+                    Point temp = nextSegment.getStart().equals(stitch) ? nextSegment.getEnd() : nextSegment.getStart();
+                    traverseNodes(temp, copyOfUnvisitedNodes);
                     tempSolution.remove(nextSegment);
                     townsGoal += nextSegment.getTownNumber();
                 }
@@ -214,13 +217,14 @@ public class PathFindingPhase {
         for (QuadNode node : unvisitedNodes) {
             if (node.getPortals().contains(stitch)) {
                 copyOfUnvisitedNodes.remove(node);
-                if (node.getPoints().contains(this.end)) {
+                if (node.getTowns().contains(this.end)) {
                     completePath(stitch, node);
                 } else {
                     for (Segment nextSegment : node.getSegments().stream().filter(s -> s.getStart().equals(stitch) || s.getEnd().equals(stitch)).toList()) {
                         tempSolution.add(nextSegment);
                         townsGoal -= nextSegment.getTownNumber();
-                        traverseNodes(nextSegment.getStart().equals(stitch) ? nextSegment.getEnd() : nextSegment.getStart(), copyOfUnvisitedNodes);
+                        Point temp = nextSegment.getStart().equals(stitch) ? nextSegment.getEnd() : nextSegment.getStart();
+                        traverseNodes(temp, copyOfUnvisitedNodes);
                         tempSolution.remove(nextSegment);
                         townsGoal += nextSegment.getTownNumber();
                     }
@@ -235,10 +239,64 @@ public class PathFindingPhase {
             townsGoal -= nextSegment.getTownNumber();
             Path path = new Path();
             int townNumber2 = 0;
-            for (Segment segment : tempSolution) {
-                path.addSegment(segment);
-                path.addLength(segment.getLength());
+            for (Segment originalSegment : tempSolution) {
+                Segment segment = new Segment(originalSegment);
+                if (segment.getTowns().contains(start) && !segment.getTowns().contains(end)) {
+                    double length = 0;
+                    if (segment.getStart().equals(tempSolution.get(1).getStart()) || segment.getStart().equals(tempSolution.get(1).getEnd())) {
+                        Point previous = segment.getStart();
+                        segment.setTowns(segment.getTowns().subList(0, segment.getTowns().indexOf(start) + 1).reversed());
+                        for (Point town : segment.getTowns()) {
+                            length += SegmentUtils.euclideanDistance(previous, town);
+                            previous = town;
+                        }
+                        path.addLength(length);
+                    } else {
+                        Point previous = segment.getEnd();
+                        segment.setTowns(segment.getTowns().subList(segment.getTowns().indexOf(start), segment.getTowns().size()));
+                        for (Point town : segment.getTowns()) {
+                            length += SegmentUtils.euclideanDistance(previous, town);
+                            previous = town;
+                        }
+                        path.addLength(length);
+                    }
+                } else if (segment.getTowns().contains(end) && !segment.getTowns().contains(start)) {
+                    double length = 0;
+                    if (segment.getStart().equals(tempSolution.get(tempSolution.size() - 2).getStart()) ||
+                            segment.getStart().equals(tempSolution.get(tempSolution.size() - 2).getEnd())) {
+                        Point previous = segment.getStart();
+                        segment.setTowns(segment.getTowns().subList(0, segment.getTowns().indexOf(end) + 1));
+                        for (Point town : segment.getTowns()) {
+                            length += SegmentUtils.euclideanDistance(previous, town);
+                            previous = town;
+                        }
+                        path.addLength(length);
+                    } else {
+                        Point previous = segment.getEnd();
+                        segment.setTowns(segment.getTowns().subList(segment.getTowns().indexOf(end), segment.getTowns().size()).reversed());
+                        for (Point town : segment.getTowns()) {
+                            length += SegmentUtils.euclideanDistance(previous, town);
+                            previous = town;
+                        }
+                        path.addLength(length);
+                    }
+                } else if (segment.getTowns().contains(start) && segment.getTowns().contains(end)) {
+                    double length = 0;
+                    Point previous = null;
+                    for (Point town : segment.getTowns()) {
+                        if (!isNull(previous)) length += SegmentUtils.euclideanDistance(previous, town);
+                        if (town.equals(end)) break;
+                        previous = town;
+                    }
+                    path.addLength(length);
+                } else {
+                    path.addLength(segment.getLength());
+                }
                 townNumber2 += segment.getTowns().size();
+                path.addSegment(segment);
+            }
+            if (townNumber2 > 4) {
+                int x = 1;
             }
             if (isNull(solutionMap.get(townNumber2))) solutionMap.put(townNumber2, path);
             else if (solutionMap.get(townNumber2).getLength() > path.getLength()) solutionMap.replace(townNumber2, path);

@@ -2,17 +2,17 @@ package gr.lonerae.phases;
 
 import gr.lonerae.model.Point;
 import gr.lonerae.utils.CommonUtils;
-import gr.lonerae.utils.constants.PreProcessingPhaseConstants;
+import gr.lonerae.utils.constants.GeneralConstants;
 import lombok.Getter;
 import java.util.*;
 
-import static gr.lonerae.utils.constants.PreProcessingPhaseConstants.*;
+import static gr.lonerae.utils.constants.GeneralConstants.*;
 
 @Getter
 public class PreProcessingPhase {
     private List<Point> towns;
     private final double e;
-    private final Map<PreProcessingPhaseConstants, Point> boundingBoxCorners = new EnumMap<>(PreProcessingPhaseConstants.class);
+    private final Map<GeneralConstants, Point> boundingBoxCorners = new EnumMap<>(GeneralConstants.class);
     private double boundingBoxSize = 0;
     private final Map<Point, ArrayList<Point>> clusters = new HashMap<>();
 

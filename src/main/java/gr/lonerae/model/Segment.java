@@ -29,6 +29,16 @@ public class Segment {
         }
     }
 
+    public Segment(Segment segment) {
+        this.start = segment.getStart();
+        this.end = segment.getEnd();
+        this.length = segment.getLength();
+        this.towns = new ArrayList<>();
+        for (Point town : segment.getTowns()) {
+            this.towns.add(new Point(town));
+        }
+    }
+
     public void traverseTown(Point town) {
         this.townNumber++;
         this.towns.add(town);

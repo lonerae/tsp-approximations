@@ -4,6 +4,7 @@ import gr.lonerae.model.Point;
 import gr.lonerae.model.QuadNode;
 import gr.lonerae.utils.PointUtils;
 import gr.lonerae.utils.QuadTreeUtils;
+import gr.lonerae.utils.constants.GeneralConstants;
 import lombok.Getter;
 
 import java.util.ArrayList;
@@ -18,11 +19,11 @@ public class QuadtreePhase {
     private final ArrayList<QuadNode> quadNodes = new ArrayList<>();
     private final int portalsPerNodeSide;
 
-    public QuadtreePhase(double squareSide, List<Point> points, int portalsPerNodeSide) {
+    public QuadtreePhase(double squareSide, List<Point> towns, int portalsPerNodeSide) {
         root = new QuadNode();
         root.setLowerLeftCorner(new Point(0,0));
         root.setSide(squareSide);
-        root.setPoints(points);
+        root.setTowns(towns);
         this.portalsPerNodeSide = portalsPerNodeSide;
     }
 
@@ -32,17 +33,16 @@ public class QuadtreePhase {
     }
 
     private void divideQuadLeaf(QuadNode node) {
-        node.setUpperLeft(makeChild(node, true, true));
-        node.setUpperRight(makeChild(node, false, true));
-        node.setLowerRight(makeChild(node, false, false));
-        node.setLowerLeft(makeChild(node, true, false));
-        for (Point p : node.getPoints()) {
-            boolean left = p.getX() < node.getLowerLeftCorner().getX() + node.getSide() / 2;
-            boolean up = p.getY() > node.getLowerLeftCorner().getY() + node.getSide() / 2;
-            boolean leftLimit = p.getX() == node.getLowerLeftCorner().getX() + node.getSide() / 2;
-            boolean upLimit = p.getY() == node.getLowerLeftCorner().getY() + node.getSide() / 2;
-
-            assignPointsToNode(node, p, leftLimit, up, upLimit, left);
+        node.getChildren().put(GeneralConstants.UPPER_LEFT, makeChild(node, true, true));
+        node.getChildren().put(GeneralConstants.UPPER_RIGHT, makeChild(node, false, true));
+        node.getChildren().put(GeneralConstants.LOWER_RIGHT, makeChild(node, false, false));
+        node.getChildren().put(GeneralConstants.LOWER_LEFT, makeChild(node, true, false));
+        for (Point town : node.getTowns()) {
+            boolean left = town.getX() < node.getLowerLeftCorner().getX() + node.getSide() / 2;
+            boolean up = town.getY() > node.getLowerLeftCorner().getY() + node.getSide() / 2;
+            boolean leftLimit = town.getX() == node.getLowerLeftCorner().getX() + node.getSide() / 2;
+            boolean upLimit = town.getY() == node.getLowerLeftCorner().getY() + node.getSide() / 2;
+            assignPointsToNode(node, town, leftLimit, up, upLimit, left);
         }
         finalizeNodePointsOrDivide(node);
     }
@@ -58,32 +58,31 @@ public class QuadtreePhase {
         return child;
     }
 
-    private static void assignPointsToNode(QuadNode node, Point p, boolean leftLimit, boolean up, boolean upLimit, boolean left) {
+    private static void assignPointsToNode(QuadNode node, Point town, boolean leftLimit, boolean up, boolean upLimit, boolean left) {
         if (leftLimit) {
-            if (up) node.getUpperLeft().getPoints().add(p);
-            else node.getLowerRight().getPoints().add(p);
+            if (up) node.getChildren().get(GeneralConstants.UPPER_LEFT).getTowns().add(town);
+            else node.getChildren().get(GeneralConstants.LOWER_RIGHT).getTowns().add(town);
         } else if (upLimit) {
-            if (left) node.getUpperLeft().getPoints().add(p);
-            else node.getUpperRight().getPoints().add(p);
-        } else if (left && up) node.getUpperLeft().getPoints().add(p);
-        else if (!left && up) node.getUpperRight().getPoints().add(p);
-        else if (!left) node.getLowerRight().getPoints().add(p);
-        else node.getLowerLeft().getPoints().add(p);
+            if (left) node.getChildren().get(GeneralConstants.UPPER_LEFT).getTowns().add(town);
+            else node.getChildren().get(GeneralConstants.UPPER_RIGHT).getTowns().add(town);
+        } else if (left && up) node.getChildren().get(GeneralConstants.UPPER_LEFT).getTowns().add(town);
+        else if (!left && up) node.getChildren().get(GeneralConstants.UPPER_RIGHT).getTowns().add(town);
+        else if (!left) node.getChildren().get(GeneralConstants.LOWER_RIGHT).getTowns().add(town);
+        else node.getChildren().get(GeneralConstants.LOWER_LEFT).getTowns().add(town);
     }
 
     private void finalizeNodePointsOrDivide(QuadNode node) {
-        if (node.getUpperLeft().getPoints().size() > 1) divideQuadLeaf(node.getUpperLeft());
-        else updateCornersAndPortals(node.getUpperLeft());
-        if (node.getUpperRight().getPoints().size() > 1) divideQuadLeaf(node.getUpperRight());
-        else updateCornersAndPortals(node.getUpperRight());
-        if (node.getLowerRight().getPoints().size() > 1) divideQuadLeaf(node.getLowerRight());
-        else updateCornersAndPortals(node.getLowerRight());
-        if (node.getLowerLeft().getPoints().size() > 1) divideQuadLeaf(node.getLowerLeft());
-        else updateCornersAndPortals(node.getLowerLeft());
+        if (node.getChildren().get(GeneralConstants.UPPER_LEFT).getTowns().size() > 1) divideQuadLeaf(node.getChildren().get(GeneralConstants.UPPER_LEFT));
+        else updateCornersAndPortals(node.getChildren().get(GeneralConstants.UPPER_LEFT));
+        if (node.getChildren().get(GeneralConstants.UPPER_RIGHT).getTowns().size() > 1) divideQuadLeaf(node.getChildren().get(GeneralConstants.UPPER_RIGHT));
+        else updateCornersAndPortals(node.getChildren().get(GeneralConstants.UPPER_RIGHT));
+        if (node.getChildren().get(GeneralConstants.LOWER_RIGHT).getTowns().size() > 1) divideQuadLeaf(node.getChildren().get(GeneralConstants.LOWER_RIGHT));
+        else updateCornersAndPortals(node.getChildren().get(GeneralConstants.LOWER_RIGHT));
+        if (node.getChildren().get(GeneralConstants.LOWER_LEFT).getTowns().size() > 1) divideQuadLeaf(node.getChildren().get(GeneralConstants.LOWER_LEFT));
+        else updateCornersAndPortals(node.getChildren().get(GeneralConstants.LOWER_LEFT));
     }
 
     private void updateCornersAndPortals(QuadNode node) {
-        // Update nodes
         quadNodes.add(node);
         // Update corners
         ArrayList<Point> nodeCorners = QuadTreeUtils.getQuadNodeCorners(node);
@@ -124,17 +123,21 @@ public class QuadtreePhase {
         List<Point> alternativePortals = new ArrayList<>();
         if (vertical) {
             for (int i = 0; i < portalsPerNodeSide; i++) {
-                alternativePortals.add(PointUtils.shiftXY(portal, 0, ((i+1)* node.getSide()) / Math.pow(portalsPerNodeSide + 1.0, depth + 2.0)));
-                alternativePortals.add(PointUtils.shiftXY(portal, 0, -((i+1)* node.getSide()) / Math.pow(portalsPerNodeSide + 1.0, depth + 2.0)));
+                alternativePortals.add(PointUtils.shiftXY(portal, 0, getDivisionFactor(node, depth, i)));
+                alternativePortals.add(PointUtils.shiftXY(portal, 0, -getDivisionFactor(node, depth, i)));
             }
         } else {
             for (int i = 0; i < portalsPerNodeSide; i++) {
-                alternativePortals.add(PointUtils.shiftXY(portal, ((i+1)* node.getSide()) / Math.pow(portalsPerNodeSide + 1.0, depth + 2.0), 0));
-                alternativePortals.add(PointUtils.shiftXY(portal, -((i+1)* node.getSide()) / Math.pow(portalsPerNodeSide + 1.0, depth + 2.0), 0));
+                alternativePortals.add(PointUtils.shiftXY(portal, getDivisionFactor(node, depth, i), 0));
+                alternativePortals.add(PointUtils.shiftXY(portal, -getDivisionFactor(node, depth, i), 0));
             }
         }
         for (Point alternativePortal : alternativePortals) {
             divide(alternativePortal, node, depth + 1);
         }
+    }
+
+    private double getDivisionFactor(QuadNode node, int depth, int i) {
+        return ((i + 1) * node.getSide()) / Math.pow(portalsPerNodeSide + 1.0, depth + 2.0);
     }
 }
