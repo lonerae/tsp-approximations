@@ -14,7 +14,6 @@ public class Segment {
     private double length;
 
     private List<Path> inner = new ArrayList<>();
-    private Point town;
     private List<Point> towns =  new ArrayList<>();
     private int townNumber = 0;
 
