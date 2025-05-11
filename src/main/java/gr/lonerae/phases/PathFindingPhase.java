@@ -23,7 +23,6 @@ public class PathFindingPhase {
     private final int townNumber;
     private final int timeLimit;
     private final List<QuadNode> iteratedNodes = new ArrayList<>();
-    private final ArrayList<Point> points = new ArrayList<>();
     private final ArrayList<Segment> temp = new ArrayList<>();
     private double target = 0.0;
     private List<Path> winners = new ArrayList<>();
@@ -295,9 +294,6 @@ public class PathFindingPhase {
                 townNumber2 += segment.getTowns().size();
                 path.addSegment(segment);
             }
-            if (townNumber2 > 4) {
-                int x = 1;
-            }
             if (isNull(solutionMap.get(townNumber2))) solutionMap.put(townNumber2, path);
             else if (solutionMap.get(townNumber2).getLength() > path.getLength()) solutionMap.replace(townNumber2, path);
             tempSolution.remove(nextSegment);
@@ -311,9 +307,9 @@ public class PathFindingPhase {
             if (!entry.getValue().isEmpty()) {
                 int segmentIndex = disconnectClusterSegments(entry);
                 Point clusterStart = new Point(entry.getKey().getOriginal().getX(), entry.getKey().getOriginal().getY());
-                int clusterStartIndex = points.indexOf(clusterStart);
+//                int clusterStartIndex = points.indexOf(clusterStart);
                 Set<Point> clusterPoints = new HashSet<>(entry.getValue());
-                reconnectClusterSegments(clusterPoints, clusterStartIndex, segmentIndex);
+//                reconnectClusterSegments(clusterPoints, clusterStartIndex, segmentIndex);
             }
         }
     }
@@ -333,7 +329,7 @@ public class PathFindingPhase {
                 bestOrder = temp2;
             }
         }
-        points.addAll(clusterStartIndex +1, bestOrder);
+//        points.addAll(clusterStartIndex +1, bestOrder);
         ArrayList<Segment> newSegments = new ArrayList<>();
         for (int i = 0; i < bestOrder.size() - 1; i++) {
             newSegments.add(new Segment(bestOrder.get(i), bestOrder.get(i+1), false));
@@ -358,9 +354,9 @@ public class PathFindingPhase {
         int dominated = 0;
         for (Segment segment : solutionSegments) {
             if (SegmentUtils.dominate(candidateSegment, segment)) {
-                dominated = handleDominated(candidateSegment, segment, dominated, toBeDominated, toBeAdded);
+                dominated = handleDominated(candidateSegment, segment, dominated, toBeDominated, toBeAdded, sequence);
             } else if (SegmentUtils.intersect(candidateSegment, segment)) {
-                handleIntersected(candidateSegment, segment, toBeDeleted, toBeReplaced);
+                handleIntersected(candidateSegment, segment, toBeDeleted, toBeReplaced, sequence);
             }
         }
         for (Integer index : toBeDominated) {
@@ -378,31 +374,31 @@ public class PathFindingPhase {
         if (toBeDeleted.isEmpty() && dominated == 0 && !sequence.isEmpty()) solutionSegments.add(candidateSegment);
     }
 
-    private void handleIntersected(Segment candidateSegment, Segment segment, ArrayList<Integer> toBeDeleted, ArrayList<Segment> toBeReplaced) {
-        int index1 = points.indexOf(segment.getEnd());
-        int index2 = points.indexOf(candidateSegment.getStart());
+    private void handleIntersected(Segment candidateSegment, Segment segment, ArrayList<Integer> toBeDeleted, ArrayList<Segment> toBeReplaced, List<Point> sequence) {
+        int index1 = sequence.indexOf(segment.getEnd());
+        int index2 = sequence.indexOf(candidateSegment.getStart());
         if (index1 > -1 && index2 > -1) {
-            points.set(index1, candidateSegment.getStart());
-            points.set(index2, segment.getEnd());
+            sequence.set(index1, candidateSegment.getStart());
+            sequence.set(index2, segment.getEnd());
             toBeDeleted.add(solutionSegments.indexOf(segment));
             toBeReplaced.add(new Segment(segment.getStart(), candidateSegment.getStart(), false));
         }
     }
 
-    private int handleDominated(Segment candidateSegment, Segment segment, int dominated, ArrayList<Integer> toBeDominated, ArrayList<Segment> toBeAdded) {
+    private int handleDominated(Segment candidateSegment, Segment segment, int dominated, ArrayList<Integer> toBeDominated, ArrayList<Segment> toBeAdded, List<Point> sequence) {
         dominated += 1;
-        points.remove(segment.getStart());
-        points.remove(segment.getEnd());
+        sequence.remove(segment.getStart());
+        sequence.remove(segment.getEnd());
         toBeDominated.add(solutionSegments.indexOf(segment));
         if (SegmentUtils.euclideanDistance(candidateSegment.getStart(), segment.getStart()) < SegmentUtils.euclideanDistance(candidateSegment.getStart(), segment.getEnd())) {
-            points.add(segment.getStart());
-            points.add(segment.getEnd());
+            sequence.add(segment.getStart());
+            sequence.add(segment.getEnd());
             toBeAdded.add(new Segment(candidateSegment.getStart(), segment.getStart(), false));
             toBeAdded.add(new Segment(segment.getStart(), segment.getEnd(), false));
             toBeAdded.add(new Segment(segment.getEnd(), candidateSegment.getEnd(), false));
         } else {
-            points.add(segment.getEnd());
-            points.add(segment.getStart());
+            sequence.add(segment.getEnd());
+            sequence.add(segment.getStart());
             toBeAdded.add(new Segment(candidateSegment.getStart(), segment.getEnd(), false));
             toBeAdded.add(new Segment(segment.getEnd(), segment.getStart(), false));
             toBeAdded.add(new Segment(segment.getStart(), candidateSegment.getEnd(), false));
