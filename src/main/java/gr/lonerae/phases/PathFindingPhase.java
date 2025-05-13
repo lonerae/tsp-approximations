@@ -178,8 +178,8 @@ public class PathFindingPhase {
             }
             for (int i = 0; i < onLinePoints.size() - 1; i++) {
                 Segment candidateSegment = new Segment(onLinePoints.get(i), onLinePoints.get(i+1), false);
-                postProcessing(candidateSegment, sequence);
                 sequence.add(onLinePoints.get(i));
+                postProcessing(candidateSegment, sequence);
             }
             sequence.add(onLinePoints.getLast());
             onLinePoints.clear();
@@ -380,6 +380,11 @@ public class PathFindingPhase {
         if (index1 > -1 && index2 > -1) {
             sequence.set(index1, candidateSegment.getStart());
             sequence.set(index2, segment.getEnd());
+            if (index1 < index2) {
+                List<Point> subList = new ArrayList<>(sequence.subList(index1+1, index2));
+                sequence.subList(index1 + 1, index2).clear();
+                sequence.addAll(index1 + 1, subList.reversed());
+            }
             toBeDeleted.add(solutionSegments.indexOf(segment));
             toBeReplaced.add(new Segment(segment.getStart(), candidateSegment.getStart(), false));
         }
