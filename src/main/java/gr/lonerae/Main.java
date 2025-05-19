@@ -59,25 +59,25 @@ public class Main {
     private static List<Double> initializeEValues() {
         List<Double> eValues = new ArrayList<>();
         eValues.add(1.0);
-//        eValues.add(0.5);
-//        eValues.add(0.2);
-//        eValues.add(0.1);
-//        eValues.add(0.01);
+        eValues.add(0.5);
+        eValues.add(0.2);
+        eValues.add(0.1);
+        eValues.add(0.01);
         return eValues;
     }
 
     private static List<Integer> initializePortalsPerNodeSide() {
         List<Integer> portalsPerNodeSide = new ArrayList<>();
         portalsPerNodeSide.add(1);
-//        portalsPerNodeSide.add(2);
-//        portalsPerNodeSide.add(3);
-//        portalsPerNodeSide.add(4);
-//        portalsPerNodeSide.add(5);
-//        portalsPerNodeSide.add(6);
-//        portalsPerNodeSide.add(7);
-//        portalsPerNodeSide.add(8);
-//        portalsPerNodeSide.add(9);
-//        portalsPerNodeSide.add(10);
+        portalsPerNodeSide.add(2);
+        portalsPerNodeSide.add(3);
+        portalsPerNodeSide.add(4);
+        portalsPerNodeSide.add(5);
+        portalsPerNodeSide.add(6);
+        portalsPerNodeSide.add(7);
+        portalsPerNodeSide.add(8);
+        portalsPerNodeSide.add(9);
+        portalsPerNodeSide.add(10);
         return portalsPerNodeSide;
     }
 
@@ -123,7 +123,7 @@ public class Main {
             }
             if (!isNull(res) && !res.isEmpty()) {
                 for (Solution kTspSolution : res.values()) {
-                    plotGraphs(entry.getKey(), kTspSolution, original, kTspSolution.getE(), kTspSolution.getPortalsPerSide());
+                    plotGraphs(entry.getKey(), kTspSolution, kTspSolution.getE(), kTspSolution.getPortalsPerSide());
                     TimeUnit.SECONDS.sleep(1);
                 }
             }
@@ -145,16 +145,31 @@ public class Main {
         dimensions = preProcessingPhaseInstance.preprocess();
 
         for (int portals : portalsPerNodeSide) {
-            res = solveInstanceForChosenEAndPortalsPerSide(e, points, res, portals, preProcessingPhaseInstance);
-            for (Solution solution : res.values()) {
-                solution.setDimensions(dimensions);
+            Map<Integer, Solution> currentRes = solveInstanceForChosenEAndPortalsPerSide(e, points, portals, preProcessingPhaseInstance);
+            if (currentRes.isEmpty()) break;
+            if (isNull(res)) {
+                for (Solution solution : currentRes.values()) {
+                    solution.setDimensions(dimensions);
+                    solution.setE(e);
+                    solution.setPortalsPerSide(portals);
+                }
+                res = currentRes;
+            }
+            else {
+                for (Integer key : currentRes.keySet()) {
+                    Solution solution = currentRes.get(key);
+                    solution.setDimensions(dimensions);
+                    solution.setE(e);
+                    solution.setPortalsPerSide(portals);
+                    if (isNull(res.get(key)) || res.get(key).getLength() > solution.getLength()) res.put(key, solution);
 //            if (res.isBest()) break;
+                }
             }
         }
         return res;
     }
 
-    private static Map<Integer, Solution> solveInstanceForChosenEAndPortalsPerSide(double e, List<Point> points, Map<Integer, Solution> res, int portals, PreProcessingPhase preProcessingPhaseInstance) {
+    private static Map<Integer, Solution> solveInstanceForChosenEAndPortalsPerSide(double e, List<Point> points, int portals, PreProcessingPhase preProcessingPhaseInstance) {
         LOGGER.log(Level.INFO, "PORTALS: {}", portals);
         Map<Integer, Solution> currentRes = Arora.calculate(preProcessingPhaseInstance, portals, points, preProcessingPhaseInstance.getClusters(), true);
 //        if (isNull(currentRes)) {
@@ -168,10 +183,10 @@ public class Main {
         return currentRes;
     }
 
-    private static void plotGraphs(String key, Solution res, List<Point> original, Double e, Integer portalsPerNodeSide) {
+    private static void plotGraphs(String key, Solution res, Double e, Integer portalsPerNodeSide) {
         Plotter.PlotSolution plotSolution = new Plotter.PlotSolution(res.getSequence(), res.getDimensions());
         plotSolution.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
         plotSolution.setVisible(true);
-        plotSolution.setTitle("instance: " + key + ", e: " + e + ", portals: " + portalsPerNodeSide);
+        plotSolution.setTitle("k: " + res.getSequence().size() + ", e: " + e + ", portals: " + portalsPerNodeSide);
     }
 }

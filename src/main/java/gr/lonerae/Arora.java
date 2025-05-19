@@ -36,7 +36,7 @@ public class Arora {
         QuadtreePhase quadtreePhaseInstance = new QuadtreePhase(preProcessingPhaseInstance.getBoundingBoxSize(), preProcessingPhaseInstance.getTowns(), portalsPerNodeSide);
         quadtreePhaseInstance.assignPortals();
         PathFindingPhase pathFindingPhase = new PathFindingPhase(preProcessingPhaseInstance.getBoundingBoxSize(), points.size(), TIME_LIMIT);
-        // todo
-        return pathFindingPhase.iterateNodes(quadtreePhaseInstance, clusters, verbose, true, preProcessingPhaseInstance.getTowns().getFirst(), preProcessingPhaseInstance.getTowns().get(1), preProcessingPhaseInstance.getTowns().size());
+        // todo: fix endpoints
+        return pathFindingPhase.iterateNodes(quadtreePhaseInstance, clusters, verbose, true, preProcessingPhaseInstance.getTowns().stream().filter(x -> x.getOriginal().equals(new Point(0,0))).findFirst().get(), preProcessingPhaseInstance.getTowns().stream().filter(x -> x.getOriginal().equals(new Point(5,9))).findFirst().get(), preProcessingPhaseInstance.getTowns().size());
     }
 }

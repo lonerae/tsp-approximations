@@ -7,10 +7,10 @@ import gr.lonerae.model.Segment;
 import gr.lonerae.phases.QuadtreePhase;
 import gr.lonerae.utils.QuadTreeUtils;
 import gr.lonerae.utils.SegmentUtils;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static java.util.Objects.isNull;
 
@@ -191,7 +191,6 @@ public class PathFinder implements Runnable {
         }
         updateMap(solution, entrance);
         updateMap(solution, exit);
-        solutions.add(solution);
         Segment removed = singleSolution.removeLast();
         currentLength -= removed.getLength();
     }
@@ -200,23 +199,33 @@ public class PathFinder implements Runnable {
         if (isNull(result.get(point))) {
             result.put(point, new ArrayList<>());
             result.get(point).add(solution);
+            solutions.add(solution);
         } else {
-            boolean add = true;
-            for (Path path : result.get(point)) {
-                if (path.getTownNumber() == solution.getTownNumber()) {
-                    add = false;
-                    if (solution.getLength() < path.getLength()) {
-                        result.get(point).set(result.get(point).indexOf(path), solution);
-                    }
-                    break;
-                }
-            }
-            if (add) {
+            Optional<Path> champion = result.get(point).stream().filter(x -> x.getTownNumber() == solution.getTownNumber()).findFirst();
+            if (champion.isEmpty()) {
                 result.get(point).add(solution);
+                solutions.add(solution);
+            }
+            else if (champion.get().getLength() > solution.getLength()) {
+                result.get(point).remove(champion.get());
+                result.get(point).add(solution);
+                solutions.add(solution);
+                // TODO: optimize more
+                // if (SegmentUtils.commonEdges(new Segment(solution.getEntrance(), solution.getExit(), false), new Segment(champion.get().getEntrance(), champion.get().getExit(), false))) {
+                // solutions.remove(champion.get());
+//  }
             }
         }
     }
 
+    @Data
+    @AllArgsConstructor
+    private class Key {
+        private Segment segment;
+        private int towns;
+    }
+
+    Map<Key, Double> test = new HashMap();
     private List<Segment> updateSegments() {
         List<Segment> segments = new ArrayList<>();
         for (Path path : solutions) {
@@ -224,31 +233,47 @@ public class PathFinder implements Runnable {
             newSegment.setLength(path.getLength());
             newSegment.getTowns().addAll(path.getTowns());
             dive(path, newSegment);
-            boolean outOfCompetition = true;
             List<Segment> toAdd = new ArrayList<>();
             List<Segment> toDelete = new ArrayList<>();
-            outOfCompetition = checkIfSegmentsShouldCompete(segments, newSegment, outOfCompetition, toDelete, toAdd);
-            if (outOfCompetition) segments.add(newSegment);
+            boolean gamesOn = checkIfSegmentsShouldCompete(newSegment, toDelete, toAdd);
+            if (!gamesOn) segments.add(newSegment);
             else {
                 segments.addAll(toAdd);
                 segments.removeAll(toDelete);
+            }
+            if (newSegment.getTowns().contains(start) && newSegment.getTowns().size() > 2 && !newSegment.getTowns().getFirst().equals(start) && !newSegment.getTowns().getLast().equals(start)) {
+                Segment siblingSegment = new Segment(newSegment);
+                siblingSegment.getTowns().remove(start);
+                siblingSegment.getTowns().addFirst(start);
+                segments.add(siblingSegment);
+            }
+            if (newSegment.getTowns().contains(end) && newSegment.getTowns().size() > 2 && !newSegment.getTowns().getFirst().equals(end) && !newSegment.getTowns().getLast().equals(end)) {
+                Segment siblingSegment = new Segment(newSegment);
+                siblingSegment.getTowns().remove(end);
+                siblingSegment.getTowns().add(end);
+                segments.add(siblingSegment);
             }
         }
         solutions.clear();
         return segments;
     }
 
-    private boolean checkIfSegmentsShouldCompete(List<Segment> segments, Segment newSegment, boolean outOfCompetition, List<Segment> toDelete, List<Segment> toAdd) {
-        for (Segment segment : segments) {
-            if (SegmentUtils.commonEdges(newSegment, segment) && segment.getTowns().size() == newSegment.getTowns().size()) {
-                outOfCompetition = false;
-                competeSegments(newSegment, toDelete, toAdd, segment);
-            }
+    private boolean checkIfSegmentsShouldCompete(Segment newSegment, List<Segment> toDelete, List<Segment> toAdd) {
+        Key key1 = new Key(new Segment(newSegment.getStart(), newSegment.getEnd(), false), newSegment.getTowns().size());
+        Key key2 = new Key(new Segment(newSegment.getEnd(), newSegment.getStart(), false), newSegment.getTowns().size());
+        if (isNull(test.get(key1)) && isNull(test.get(key2))) {
+            test.put(key1, newSegment.getLength());
+            return false;
+        } else {
+            Segment champion = !isNull(test.get(key1)) ? key1.getSegment() : key2.getSegment();
+            Segment winner = competeSegments(newSegment, toDelete, toAdd, champion);
+            if (!isNull(test.get(key1))) key1.setSegment(winner);
+            else key2.setSegment(winner);
+            return true;
         }
-        return outOfCompetition;
     }
 
-    private void competeSegments(Segment newSegment, List<Segment> toDelete, List<Segment> toAdd, Segment segment) {
+    private Segment competeSegments(Segment newSegment, List<Segment> toDelete, List<Segment> toAdd, Segment segment) {
         if (
                 ((!segment.getTowns().contains(start) && !newSegment.getTowns().contains(start)) || (segment.getTowns().contains(start) && newSegment.getTowns().contains(start))) &&
                 ((!segment.getTowns().contains(end) && !newSegment.getTowns().contains(end)) || (segment.getTowns().contains(end) && newSegment.getTowns().contains(end)))
@@ -256,6 +281,7 @@ public class PathFinder implements Runnable {
             if (segment.getLength() > newSegment.getLength()) {
                 toDelete.add(segment);
                 toAdd.add(newSegment);
+                return newSegment;
             }
         } else if (
                 (!segment.getTowns().contains(start) && newSegment.getTowns().contains(start)) ||
@@ -263,7 +289,9 @@ public class PathFinder implements Runnable {
         ) {
             toDelete.add(segment);
             toAdd.add(newSegment);
+            return newSegment;
         }
+        return segment;
     }
 
     private void dive(Path path, Segment newSegment) {
