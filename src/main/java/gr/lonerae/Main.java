@@ -59,25 +59,25 @@ public class Main {
     private static List<Double> initializeEValues() {
         List<Double> eValues = new ArrayList<>();
         eValues.add(1.0);
-//        eValues.add(0.5);
-//        eValues.add(0.2);
-//        eValues.add(0.1);
-//        eValues.add(0.01);
+        eValues.add(0.5);
+        eValues.add(0.2);
+        eValues.add(0.1);
+        eValues.add(0.01);
         return eValues;
     }
 
     private static List<Integer> initializePortalsPerNodeSide() {
         List<Integer> portalsPerNodeSide = new ArrayList<>();
         portalsPerNodeSide.add(1);
-//        portalsPerNodeSide.add(2);
-//        portalsPerNodeSide.add(3);
-//        portalsPerNodeSide.add(4);
-//        portalsPerNodeSide.add(5);
-//        portalsPerNodeSide.add(6);
-//        portalsPerNodeSide.add(7);
-//        portalsPerNodeSide.add(8);
-//        portalsPerNodeSide.add(9);
-//        portalsPerNodeSide.add(10);
+        portalsPerNodeSide.add(2);
+        portalsPerNodeSide.add(3);
+        portalsPerNodeSide.add(4);
+        portalsPerNodeSide.add(5);
+        portalsPerNodeSide.add(6);
+        portalsPerNodeSide.add(7);
+        portalsPerNodeSide.add(8);
+        portalsPerNodeSide.add(9);
+        portalsPerNodeSide.add(10);
         return portalsPerNodeSide;
     }
 

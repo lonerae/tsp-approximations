@@ -317,10 +317,35 @@ public class PathFindingPhase {
     }
 
     private void assignLengthToSolution(boolean verbose, Map<Integer, Solution> kTspSolutions, ArrayList<Point> sequence, double length) {
-        Point previousTown = null;
-        for (Point currentTown : sequence) {
-            if (isNull(previousTown)) previousTown = currentTown;
-            else length += SegmentUtils.euclideanDistance(previousTown, currentTown);
+        boolean flag = true;
+        while (flag) {
+            Point previousTown = null;
+            List<Segment> bob = new ArrayList<>();
+            for (Point currentTown : sequence) {
+                if (isNull(previousTown)) previousTown = currentTown;
+                else {
+                    bob.add(new Segment(previousTown, currentTown, false));
+                    length += SegmentUtils.euclideanDistance(previousTown, currentTown);
+                    previousTown = currentTown;
+                }
+            }
+            for (Segment segment : bob) {
+                for (Segment segment2 : bob.subList(bob.indexOf(segment) + 1, bob.size())) {
+                    if (SegmentUtils.intersect(segment, segment2, true)) {
+                        int index1 = sequence.indexOf(segment.getEnd());
+                        int index2 = sequence.indexOf(segment2.getStart());
+                        sequence.set(index1, segment2.getStart());
+                        sequence.set(index2, segment.getEnd());
+                        List<Point> subList = new ArrayList<>(sequence.subList(index1+1, index2));
+                        sequence.subList(index1 + 1, index2).clear();
+                        sequence.addAll(index1 + 1, subList.reversed());
+                        flag = false;
+                    }
+                    if (!flag) break;
+                }
+                if (!flag) break;
+            }
+            flag = !flag;
         }
         if (verbose) LOGGER.log(Level.INFO, "TOWNS VISITED: {}/{}", sequence.size(), townNumber);
         if (verbose) LOGGER.log(Level.INFO, "LENGTH: {}", length);
