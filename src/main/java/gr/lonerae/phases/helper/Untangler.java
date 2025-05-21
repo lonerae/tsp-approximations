@@ -40,8 +40,8 @@ public class Untangler {
             boolean intersectFirst = false;
             boolean intersectSecond = true;
             if (!isNull(lead)) {
-                intersectFirst = solutionSegments.stream().anyMatch(segment -> SegmentUtils.intersect(segment, new Segment(onLinePoints.getFirst(), lead, false)));
-                intersectSecond = solutionSegments.stream().anyMatch(segment -> SegmentUtils.intersect(segment, new Segment(onLinePoints.getLast(), lead, false)));
+                intersectFirst = solutionSegments.stream().anyMatch(segment -> SegmentUtils.intersect(segment, new Segment(onLinePoints.getFirst(), lead, false), false));
+                intersectSecond = solutionSegments.stream().anyMatch(segment -> SegmentUtils.intersect(segment, new Segment(onLinePoints.getLast(), lead, false), false));
             }
             if (intersectFirst || (!isNull(lead) && !intersectSecond && leadCloserToEnd(onLinePoints, lead))) Collections.reverse(onLinePoints);
             if (!sequence.isEmpty()) postProcessing(sequence, solutionSegments, new Segment(sequence.getLast(), onLinePoints.getFirst(), false));
@@ -66,8 +66,14 @@ public class Untangler {
         int replaceIndex = 0;
         int dominated = 0;
         for (Segment segment : solutionSegments) {
-            if (SegmentUtils.dominate(candidateSegment, segment)) dominated = handleDominated(sequence, solutionSegments, candidateSegment, segment, dominated, toBeDominated, toBeAdded);
-            else if (SegmentUtils.intersect(candidateSegment, segment)) handleIntersected(sequence, solutionSegments, candidateSegment, segment, toBeDeleted, toBeReplaced);
+            if (SegmentUtils.dominate(candidateSegment, segment)) {
+                dominated = handleDominated(sequence, solutionSegments, candidateSegment, segment, dominated, toBeDominated, toBeAdded);
+                break;
+            }
+            else if (SegmentUtils.intersect(candidateSegment, segment, true)) {
+                handleIntersected(sequence, solutionSegments, candidateSegment, segment, toBeDeleted, toBeReplaced);
+                break;
+            }
         }
         for (Integer index : toBeDominated) {
             Segment segment = solutionSegments.get(index);

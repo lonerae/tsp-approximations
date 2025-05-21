@@ -11,15 +11,11 @@ import static java.util.Objects.isNull;
 public class SegmentUtils {
     private SegmentUtils() {}
 
-    public static boolean intersect(Segment s1, Segment s2) {
-        Double l1 = null;
-        if (s1.getEnd().getX() != s1.getStart().getX()) {
-            l1 = (s1.getEnd().getY() - s1.getStart().getY()) / (s1.getEnd().getX() - s1.getStart().getX());
-        }
-        Double l2 = null;
-        if (s2.getEnd().getX() != s2.getStart().getX()) {
-            l2 = (s2.getEnd().getY() - s2.getStart().getY()) / (s2.getEnd().getX() - s2.getStart().getX());
-        }
+    private static boolean allowEdgeIntersection = true;
+
+    public static boolean intersect(Segment s1, Segment s2, boolean withEdge) {
+        Double l1 = calculateSlope(s1);
+        Double l2 = calculateSlope(s2);
         if ((!isNull(l1) && !isNull(l2) && (Double.compare(l1, l2) == 0 || l1.doubleValue() == l2.doubleValue())) || (isNull(l1) && isNull(l2))) return false;
         Point intersection = null;
         if (!isNull(l1) && !isNull(l2)) {
@@ -34,27 +30,41 @@ public class SegmentUtils {
             double b1 = s1.getStart().getY() - l1 * s1.getStart().getX();
             intersection = new Point(s2.getStart().getX(), l1*s2.getStart().getX()+b1);
         }
-        return pointInSegment(s1, intersection) && pointInSegment(s2, intersection);
+        if (!withEdge) return pointInSegment(s1, intersection) && pointInSegment(s2, intersection);
+        else {
+            if (pointInSegment(s1, intersection) && pointInSegment(s2, intersection)) {
+                allowEdgeIntersection = true;
+                return true;
+            }
+            else if (
+                    ((pointInSegment(s1, intersection) && (intersection.equals(s2.getStart()) || intersection.equals(s2.getEnd()))) ||
+                    (pointInSegment(s2, intersection) && (intersection.equals(s1.getStart()) || intersection.equals(s1.getEnd())))) && allowEdgeIntersection
+            ) {
+                allowEdgeIntersection = false;
+                return true;
+            }
+            allowEdgeIntersection = true;
+            return false;
+        }
+    }
+
+    private static Double calculateSlope(Segment segment) {
+        Double slope = null;
+        if (segment.getEnd().getX() != segment.getStart().getX()) {
+            slope = (segment.getEnd().getY() - segment.getStart().getY()) / (segment.getEnd().getX() - segment.getStart().getX());
+        }
+        return slope;
     }
 
     public static boolean dominate(Segment parent, Segment child) {
-        Double l1 = null;
-        if (parent.getEnd().getX() != parent.getStart().getX()) {
-            l1 = (parent.getEnd().getY() - parent.getStart().getY()) / (parent.getEnd().getX() - parent.getStart().getX());
-        }
-        Double l2 = null;
-        if (child.getEnd().getX() != child.getStart().getX()) {
-            l2 = (child.getEnd().getY() - child.getStart().getY()) / (child.getEnd().getX() - child.getStart().getX());
-        }
+        Double l1 = calculateSlope(parent);
+        Double l2 = calculateSlope(child);
         if ((!isNull(l1) && !isNull(l2) && !l1.equals(l2)) || (isNull(l1) && !isNull(l2)) || (isNull(l2) && !isNull(l1))) return false;
         return segmentInSegment(parent, child);
     }
 
     public static boolean onLine(Segment s, Point p) {
-        Double l = null;
-        if (s.getEnd().getX() != s.getStart().getX()) {
-            l = (s.getEnd().getY() - s.getStart().getY()) / (s.getEnd().getX() - s.getStart().getX());
-        }
+        Double l = calculateSlope(s);
 
         if (isNull(l)) return Double.compare(p.getX(), s.getStart().getX()) == 0;
         else {

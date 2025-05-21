@@ -12,7 +12,7 @@ import java.util.Map;
 
 public class Arora {
 
-    private static final int TIME_LIMIT = 1;
+    private static final int TIME_LIMIT = 5;
 
     private Arora() {}
 
@@ -37,6 +37,6 @@ public class Arora {
         quadtreePhaseInstance.assignPortals();
         PathFindingPhase pathFindingPhase = new PathFindingPhase(preProcessingPhaseInstance.getBoundingBoxSize(), points.size(), TIME_LIMIT);
         // todo: fix endpoints
-        return pathFindingPhase.iterateNodes(quadtreePhaseInstance, clusters, verbose, true, preProcessingPhaseInstance.getTowns().stream().filter(x -> x.getOriginal().equals(new Point(0,0))).findFirst().get(), preProcessingPhaseInstance.getTowns().stream().filter(x -> x.getOriginal().equals(new Point(5,9))).findFirst().get(), preProcessingPhaseInstance.getTowns().size());
+        return pathFindingPhase.iterateNodes(quadtreePhaseInstance, clusters, verbose, true, preProcessingPhaseInstance.getTowns().stream().filter(x -> x.getOriginal().equals(new Point(0,0))).findFirst().get(), preProcessingPhaseInstance.getTowns().stream().filter(x -> x.getOriginal().equals(new Point(16,20))).findFirst().get(), preProcessingPhaseInstance.getTowns().size());
     }
 }
