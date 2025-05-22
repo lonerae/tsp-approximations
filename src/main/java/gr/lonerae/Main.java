@@ -48,11 +48,12 @@ public class Main {
 
     private static Map<String, Integer> initializeOrienteeringInstances() {
         Map<String, Integer> solvedInstances = new HashMap<>();
-        solvedInstances.put("set64", 80);
-        solvedInstances.put("set66", 130);
-        solvedInstances.put("tsiligirides1", 85);
-        solvedInstances.put("tsiligirides2", 45);
-        solvedInstances.put("tsiligirides3", 110);
+//        solvedInstances.put("set64", 80);
+//        solvedInstances.put("set66", 130);
+//        solvedInstances.put("tsiligirides1", 85);
+//        solvedInstances.put("tsiligirides2", 45);
+//        solvedInstances.put("tsiligirides3", 110);
+        solvedInstances.put("test2", 0);
         return solvedInstances;
     }
 
@@ -71,13 +72,13 @@ public class Main {
         portalsPerNodeSide.add(1);
         portalsPerNodeSide.add(2);
         portalsPerNodeSide.add(3);
-        portalsPerNodeSide.add(4);
-        portalsPerNodeSide.add(5);
-        portalsPerNodeSide.add(6);
-        portalsPerNodeSide.add(7);
-        portalsPerNodeSide.add(8);
-        portalsPerNodeSide.add(9);
-        portalsPerNodeSide.add(10);
+//        portalsPerNodeSide.add(4);
+//        portalsPerNodeSide.add(5);
+//        portalsPerNodeSide.add(6);
+//        portalsPerNodeSide.add(7);
+//        portalsPerNodeSide.add(8);
+//        portalsPerNodeSide.add(9);
+//        portalsPerNodeSide.add(10);
         return portalsPerNodeSide;
     }
 
@@ -129,7 +130,7 @@ public class Main {
             }
             return avgPerfomance;
         } else {
-            Gottlieb.calculate(points.getFirst(), points.get(1), points);
+            Gottlieb.calculate(points.get(2), points.getFirst(), points);
             return -1;
         }
     }
@@ -162,7 +163,6 @@ public class Main {
                     solution.setE(e);
                     solution.setPortalsPerSide(portals);
                     if (isNull(res.get(key)) || res.get(key).getLength() > solution.getLength()) res.put(key, solution);
-//            if (res.isBest()) break;
                 }
             }
         }

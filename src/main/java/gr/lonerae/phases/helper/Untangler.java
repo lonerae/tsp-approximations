@@ -44,10 +44,14 @@ public class Untangler {
                 intersectSecond = solutionSegments.stream().anyMatch(segment -> SegmentUtils.intersect(segment, new Segment(onLinePoints.getLast(), lead, false), false));
             }
             if (intersectFirst || (!isNull(lead) && !intersectSecond && leadCloserToEnd(onLinePoints, lead))) Collections.reverse(onLinePoints);
-            if (!sequence.isEmpty()) postProcessing(sequence, solutionSegments, new Segment(sequence.getLast(), onLinePoints.getFirst(), false));
+            if (!sequence.isEmpty()) {
+                solutionSegments.add(new Segment(sequence.getLast(), onLinePoints.getFirst(), false));
+//                postProcessing(sequence, solutionSegments, new Segment(sequence.getLast(), onLinePoints.getFirst(), false));
+            }
             for (int i = 0; i < onLinePoints.size() - 1; i++) {
                 sequence.add(onLinePoints.get(i));
-                postProcessing(sequence, solutionSegments, new Segment(onLinePoints.get(i), onLinePoints.get(i+1), false));
+                solutionSegments.add(new Segment(onLinePoints.get(i), onLinePoints.get(i+1), false));
+//                postProcessing(sequence, solutionSegments, new Segment(onLinePoints.get(i), onLinePoints.get(i+1), false));
             }
             sequence.add(onLinePoints.getLast());
             onLinePoints.clear();
@@ -125,5 +129,46 @@ public class Untangler {
             toBeAdded.add(new Segment(segment.getStart(), candidateSegment.getEnd(), false));
         }
         return dominated;
+    }
+
+    public static void untangle(List<Point> sequence) {
+        boolean cycleFound = true;
+        while (cycleFound) {
+            Point previousTown = null;
+            List<Segment> bob = new ArrayList<>();
+            constructSequence(sequence, previousTown, bob);
+            for (Segment segment : bob) {
+                for (Segment segment2 : bob.subList(bob.indexOf(segment) + 1, bob.size())) {
+                    cycleFound = breakCycle(sequence, segment, segment2, cycleFound);
+                    if (!cycleFound) break;
+                }
+                if (!cycleFound) break;
+            }
+            cycleFound = !cycleFound;
+        }
+    }
+
+    private static void constructSequence(List<Point> sequence, Point previousTown, List<Segment> bob) {
+        for (Point currentTown : sequence) {
+            if (isNull(previousTown)) previousTown = currentTown;
+            else {
+                bob.add(new Segment(previousTown, currentTown, false));
+                previousTown = currentTown;
+            }
+        }
+    }
+
+    private static boolean breakCycle(List<Point> sequence, Segment segment, Segment segment2, boolean flag) {
+        if (SegmentUtils.intersect(segment, segment2, true)) {
+            int index1 = sequence.indexOf(segment.getEnd());
+            int index2 = sequence.indexOf(segment2.getStart());
+            sequence.set(index1, segment2.getStart());
+            sequence.set(index2, segment.getEnd());
+            List<Point> subList = new ArrayList<>(sequence.subList(index1+1, index2));
+            sequence.subList(index1 + 1, index2).clear();
+            sequence.addAll(index1 + 1, subList.reversed());
+            flag = false;
+        }
+        return flag;
     }
 }

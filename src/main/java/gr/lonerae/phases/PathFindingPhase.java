@@ -288,7 +288,6 @@ public class PathFindingPhase {
         solutionSegments = new ArrayList<>();
         ArrayList<Point> sequence = new ArrayList<>();
         Point lead = null;
-        double length = 0;
         Segment currentSegment = null;
         for (Segment segment : solution.getSegments()) {
             for (Point town : segment.getTowns()) {
@@ -300,7 +299,7 @@ public class PathFindingPhase {
             }
             //        explodeClusters(clusters); ???
         }
-        assignLengthToSolution(verbose, kTspSolutions, sequence, length);
+        assignLengthToSolution(verbose, kTspSolutions, sequence);
     }
 
     private Point addTownToSequence(Point town, Segment currentSegment, Point lead, ArrayList<Point> sequence) {
@@ -310,46 +309,41 @@ public class PathFindingPhase {
             // Add all previous towns belonging in the same straight line
             Untangler.addOnLinePoints(sequence, onLinePoints, solutionSegments, lead);
             Segment candidateSegment = new Segment(sequence.getLast(), town.getOriginal(), false);
-            Untangler.postProcessing(sequence, solutionSegments, candidateSegment);
+            solutionSegments.add(candidateSegment);
             sequence.add(town.getOriginal());
         }
         return lead;
     }
 
-    private void assignLengthToSolution(boolean verbose, Map<Integer, Solution> kTspSolutions, ArrayList<Point> sequence, double length) {
-        boolean flag = true;
-        while (flag) {
-            Point previousTown = null;
-            List<Segment> bob = new ArrayList<>();
-            for (Point currentTown : sequence) {
-                if (isNull(previousTown)) previousTown = currentTown;
-                else {
-                    bob.add(new Segment(previousTown, currentTown, false));
-                    length += SegmentUtils.euclideanDistance(previousTown, currentTown);
-                    previousTown = currentTown;
-                }
-            }
-            for (Segment segment : bob) {
-                for (Segment segment2 : bob.subList(bob.indexOf(segment) + 1, bob.size())) {
-                    if (SegmentUtils.intersect(segment, segment2, true)) {
-                        int index1 = sequence.indexOf(segment.getEnd());
-                        int index2 = sequence.indexOf(segment2.getStart());
-                        sequence.set(index1, segment2.getStart());
-                        sequence.set(index2, segment.getEnd());
-                        List<Point> subList = new ArrayList<>(sequence.subList(index1+1, index2));
-                        sequence.subList(index1 + 1, index2).clear();
-                        sequence.addAll(index1 + 1, subList.reversed());
-                        flag = false;
-                    }
-                    if (!flag) break;
-                }
-                if (!flag) break;
-            }
-            flag = !flag;
-        }
+    private void assignLengthToSolution(boolean verbose, Map<Integer, Solution> kTspSolutions, ArrayList<Point> sequence) {
+        // todo: shouldn't happen
+        if (!sequence.contains(end.getOriginal())) return;
+        Untangler.untangle(sequence);
+        fixFinalSegment(sequence);
+        double length = getFinalSolutionLength(sequence);
         if (verbose) LOGGER.log(Level.INFO, "TOWNS VISITED: {}/{}", sequence.size(), townNumber);
         if (verbose) LOGGER.log(Level.INFO, "LENGTH: {}", length);
         kTspSolutions.put(sequence.size(), new Solution(length, sequence, 0, 0.0, false, null));
+    }
+
+    private void fixFinalSegment(ArrayList<Point> sequence) {
+        if (!sequence.getLast().equals(end.getOriginal())) {
+            int endIndex = sequence.indexOf(end.getOriginal());
+            Collections.swap(sequence, endIndex, sequence.size() - 1);
+        }
+    }
+
+    private static double getFinalSolutionLength(ArrayList<Point> sequence) {
+        double length = 0;
+        Point previousTown = null;
+        for (Point currentTown : sequence) {
+            if (isNull(previousTown)) previousTown = currentTown;
+            else {
+                length += SegmentUtils.euclideanDistance(previousTown, currentTown);
+                previousTown = currentTown;
+            }
+        }
+        return length;
     }
 
     private void explodeClusters(List<Point> sequence, Map<Point, ArrayList<Point>> clusters) {
