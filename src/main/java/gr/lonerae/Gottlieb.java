@@ -1,11 +1,9 @@
 package gr.lonerae;
 
-import com.google.common.collect.Sets;
 import gr.lonerae.model.Point;
 import gr.lonerae.model.Solution;
-import gr.lonerae.phases.PreProcessingPhase;
-import gr.lonerae.utils.PointUtils;
-import gr.lonerae.utils.SegmentUtils;
+import gr.lonerae.phases.arora.PreProcessingPhase;
+import gr.lonerae.phases.gottlieb.RotationPhase;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
@@ -38,7 +36,8 @@ public class Gottlieb {
     }
 
     public static void calculate(Point start, Point end, List<Point> points) {
-        points.sort(Comparator.comparingDouble(Point::getX));
+        RotationPhase rotationPhase = new RotationPhase(start, end, points);
+        rotationPhase.rotateOnEndpointAxis();
         // for all d, p_i satisfying d ≤ p_i = s and k ∈ [k], we ﬁx entries V(p_i, d, k) = Arora(p_1, p_i, s, d, k)
         int counter = 0;
         int pauseIndex = -1;

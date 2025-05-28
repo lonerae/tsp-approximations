@@ -1,9 +1,9 @@
-package gr.lonerae.phases;
+package gr.lonerae.phases.arora;
 
 import com.google.common.collect.Sets;
 import gr.lonerae.model.*;
-import gr.lonerae.phases.helper.PathFinder;
-import gr.lonerae.phases.helper.Untangler;
+import gr.lonerae.phases.arora.helper.PathFinder;
+import gr.lonerae.phases.arora.helper.Untangler;
 import gr.lonerae.utils.SegmentUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;

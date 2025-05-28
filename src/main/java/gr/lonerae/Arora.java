@@ -2,9 +2,9 @@ package gr.lonerae;
 
 import gr.lonerae.model.Point;
 import gr.lonerae.model.Solution;
-import gr.lonerae.phases.PathFindingPhase;
-import gr.lonerae.phases.PreProcessingPhase;
-import gr.lonerae.phases.QuadtreePhase;
+import gr.lonerae.phases.arora.PathFindingPhase;
+import gr.lonerae.phases.arora.PreProcessingPhase;
+import gr.lonerae.phases.arora.QuadtreePhase;
 
 import java.util.ArrayList;
 import java.util.List;

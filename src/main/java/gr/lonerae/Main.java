@@ -3,7 +3,7 @@ package gr.lonerae;
 import gr.lonerae.graphics.Plotter;
 import gr.lonerae.model.Point;
 import gr.lonerae.model.Solution;
-import gr.lonerae.phases.PreProcessingPhase;
+import gr.lonerae.phases.arora.PreProcessingPhase;
 import gr.lonerae.utils.CommonUtils;
 import gr.lonerae.utils.FileUtils;
 import org.apache.logging.log4j.Level;
@@ -70,8 +70,8 @@ public class Main {
     private static List<Integer> initializePortalsPerNodeSide() {
         List<Integer> portalsPerNodeSide = new ArrayList<>();
         portalsPerNodeSide.add(1);
-        portalsPerNodeSide.add(2);
-        portalsPerNodeSide.add(3);
+//        portalsPerNodeSide.add(2);
+//        portalsPerNodeSide.add(3);
 //        portalsPerNodeSide.add(4);
 //        portalsPerNodeSide.add(5);
 //        portalsPerNodeSide.add(6);
@@ -130,7 +130,7 @@ public class Main {
             }
             return avgPerfomance;
         } else {
-            Gottlieb.calculate(points.get(2), points.getFirst(), points);
+            Gottlieb.calculate(points.getFirst(), points.get(2), points);
             return -1;
         }
     }

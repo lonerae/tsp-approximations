@@ -1,4 +1,4 @@
-package gr.lonerae.phases;
+package gr.lonerae.phases.arora;
 
 import gr.lonerae.model.Point;
 import gr.lonerae.utils.CommonUtils;

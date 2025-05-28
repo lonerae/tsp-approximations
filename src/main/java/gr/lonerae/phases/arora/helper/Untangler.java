@@ -1,4 +1,4 @@
-package gr.lonerae.phases.helper;
+package gr.lonerae.phases.arora.helper;
 
 import gr.lonerae.model.Point;
 import gr.lonerae.model.Segment;

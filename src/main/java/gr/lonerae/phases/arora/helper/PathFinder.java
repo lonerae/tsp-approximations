@@ -1,10 +1,10 @@
-package gr.lonerae.phases.helper;
+package gr.lonerae.phases.arora.helper;
 
 import gr.lonerae.model.Path;
 import gr.lonerae.model.Point;
 import gr.lonerae.model.QuadNode;
 import gr.lonerae.model.Segment;
-import gr.lonerae.phases.QuadtreePhase;
+import gr.lonerae.phases.arora.QuadtreePhase;
 import gr.lonerae.utils.QuadTreeUtils;
 import gr.lonerae.utils.SegmentUtils;
 import lombok.AllArgsConstructor;
