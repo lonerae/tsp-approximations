@@ -53,17 +53,18 @@ public class Main {
 //        solvedInstances.put("tsiligirides1", 85);
 //        solvedInstances.put("tsiligirides2", 45);
 //        solvedInstances.put("tsiligirides3", 110);
-        solvedInstances.put("test2", 0);
+        solvedInstances.put("test", 0);
+//        solvedInstances.put("test2", 0);
         return solvedInstances;
     }
 
     private static List<Double> initializeEValues() {
         List<Double> eValues = new ArrayList<>();
         eValues.add(1.0);
-        eValues.add(0.5);
-        eValues.add(0.2);
-        eValues.add(0.1);
-        eValues.add(0.01);
+//        eValues.add(0.5);
+//        eValues.add(0.2);
+//        eValues.add(0.1);
+//        eValues.add(0.01);
         return eValues;
     }
 
@@ -130,7 +131,7 @@ public class Main {
             }
             return avgPerfomance;
         } else {
-            Gottlieb.calculate(points.getFirst(), points.get(2), points);
+            Gottlieb.calculate(points.get(2), points.get(0), points);
             return -1;
         }
     }

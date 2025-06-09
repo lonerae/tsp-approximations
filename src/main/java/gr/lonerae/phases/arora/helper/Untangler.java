@@ -162,6 +162,9 @@ public class Untangler {
         if (SegmentUtils.intersect(segment, segment2, true)) {
             int index1 = sequence.indexOf(segment.getEnd());
             int index2 = sequence.indexOf(segment2.getStart());
+            if (index1 == index2) {
+                return true;
+            }
             sequence.set(index1, segment2.getStart());
             sequence.set(index2, segment.getEnd());
             List<Point> subList = new ArrayList<>(sequence.subList(index1+1, index2));

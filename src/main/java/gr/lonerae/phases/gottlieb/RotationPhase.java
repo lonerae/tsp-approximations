@@ -13,23 +13,28 @@ public class RotationPhase {
     private List<Point> points;
 
     public void rotateOnEndpointAxis() {
+        double xDisplacement = start.getX();
+        double yDisplacement = start.getY();
         // Set start as the origin
         for (Point point : points) {
-            point.setX(point.getX() - start.getX());
-            point.setY(point.getY() - start.getY());
+            point.setX(point.getX() - xDisplacement);
+            point.setY(point.getY() - yDisplacement);
         }
-        start.setX(0);
-        end.setX(end.getX() - start.getX());
-        end.setY(end.getY() - start.getY());
-        double sin = - (end.getY() / Math.sqrt(Math.pow(end.getX(), 2) + Math.pow(end.getY(), 2)));
-        double cos = Math.sqrt(1 - Math.pow(sin, 2));
+        // Calculate angle
+        int cosSign = end.getX() >= 0 ? 1 : -1;
+        int sinSign = end.getY() <= 0 ? 1 : -1;
+        double sin = sinSign * (Math.abs(end.getY()) / Math.sqrt(Math.pow(end.getX(), 2) + Math.pow(end.getY(), 2)));
+        double cos = cosSign * Math.sqrt(1 - Math.pow(sin, 2));
+        // Rotate points and return to original position
         for (Point point : points) {
-            if (point.equals(start)) continue;
+            if (point.equals(start)) {
+                point.setX(point.getX() + xDisplacement);
+                continue;
+            }
             double oldX = point.getX();
             double oldY = point.getY();
-            point.setX(Math.round(oldX * cos - oldY * sin));
-            point.setY(Math.round(oldY * cos + oldX * sin));
+            point.setX(Math.round((oldX * cos - oldY * sin) * Math.pow(10,14)) / Math.pow(10,14) + xDisplacement);
+            point.setY(Math.round((oldY * cos + oldX * sin) * Math.pow(10,14)) / Math.pow(10,14));
         }
-        points.sort(Comparator.comparingDouble(Point::getX));
     }
 }

@@ -4,6 +4,7 @@ import gr.lonerae.model.Point;
 import gr.lonerae.model.Solution;
 import gr.lonerae.phases.arora.PreProcessingPhase;
 import gr.lonerae.phases.gottlieb.RotationPhase;
+import gr.lonerae.utils.SegmentUtils;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
@@ -12,6 +13,28 @@ import java.util.*;
 import static java.util.Objects.isNull;
 
 public class Gottlieb {
+
+    @Data
+    @AllArgsConstructor
+    private static class AroraKey {
+        private Point windowStart;
+        private Point windowEnd;
+        private Point start;
+        private Point end;
+        private int visitedTowns;
+
+        @Override
+        public String toString() {
+            return "AroraKey{" +
+                    "windowStart=" + windowStart +
+                    ", windowEnd=" + windowEnd +
+                    ", start=" + start +
+                    ", end=" + end +
+                    ", visitedTowns=" + visitedTowns +
+                    '}';
+        }
+    }
+    private static Map<AroraKey, Double> aroraSolutions = new HashMap<>();
 
     @Data
     @AllArgsConstructor
@@ -29,7 +52,6 @@ public class Gottlieb {
                     '}';
         }
     }
-
     private static Map<GottliebKey, Solution> v = new HashMap<>();
 
     private Gottlieb() {
@@ -38,68 +60,58 @@ public class Gottlieb {
     public static void calculate(Point start, Point end, List<Point> points) {
         RotationPhase rotationPhase = new RotationPhase(start, end, points);
         rotationPhase.rotateOnEndpointAxis();
-        // for all d, p_i satisfying d ≤ p_i = s and k ∈ [k], we ﬁx entries V(p_i, d, k) = Arora(p_1, p_i, s, d, k)
-        int counter = 0;
-        int pauseIndex = -1;
-        List<Point> copy = new ArrayList<>();
-        while (counter < points.size() && points.get(counter).getX() <= start.getX()) {
-            copy.add(new Point(points.get(counter)));
-            counter++;
-        }
-        pauseIndex = counter;
-        for (int j = 0; j < copy.size(); j++) {
-            Map<Integer, Solution> partialSolutions = aroraSubRoutine(new Point(start), copy.get(j), copy, copy.size());
-            for (int k = 2; k < copy.size() + 1; k++) {
-                if (isNull(partialSolutions.get(k))) continue;
-                GottliebKey key = new GottliebKey(start, points.get(j), k);
-                System.out.println(key);
-                v.put(key, partialSolutions.get(k));
-            }
-            copy = new ArrayList<>();
-            counter = 0;
-            while (counter < points.size() && points.get(counter).getX() <= start.getX()) {
-                copy.add(new Point(points.get(counter)));
-                counter++;
+        // Sort by ascending x
+        points.sort(Comparator.comparingDouble(Point::getX));
+        // Initial values of v
+        List<Point> initialWindow = points.subList(0, points.indexOf(start) + 1);
+        for (int i = 0; i < points.indexOf(start); i++) {
+            List<Point> initialWindowCopy = new ArrayList<>();
+            for (Point point : initialWindow) initialWindowCopy.add(new Point(point));
+            Map<Integer, Solution> solutions = aroraSubRoutine(new Point(start), new Point(points.get(i)), initialWindowCopy, initialWindow.size());
+            for (Map.Entry<Integer, Solution> entry : solutions.entrySet()) {
+                GottliebKey gottliebKey = new GottliebKey(start, points.get(i), entry.getKey());
+                v.put(gottliebKey, entry.getValue());
             }
         }
-        // for each p_i > s in increasing order, calculate the entries for all d satisfying s < d ≤ p_i and all k1 ∈ [k]
-        // V (p_i, d, k1) = min{V(p_j, d2, k2) + |d2 − c| + Arora(p_j+1, p_i, c, d, k1 − k2) : p_j ∈ P_i, d ∈ P_j, c ∈ P_i \ P_j, k2 < k1}
+        // Gottlieb
+        int index = points.indexOf(start);
+        for (int i = index + 1; i < points.size(); i++) {
+            for (int d1 = index + 1; d1 <= i; d1++) {
+                // k1 = 2 karfwto
+                GottliebKey goal = new GottliebKey(points.get(i), points.get(d1), 2);
+                v.put(goal, new Solution(SegmentUtils.euclideanDistance(points.get(i), points.get(d1)), new ArrayList<>(List.of(points.get(i), points.get(d1))), 0, 0, true, null));
+                for (int k1 = 3; k1 <= i; k1++) {
+                    goal = new GottliebKey(points.get(i), points.get(d1), k1);
+                    double best = Double.MAX_VALUE;
+                    for (int j = index; j <= i; j++) {
+                        if (d1 < j+1 || d1 > i) continue;
+                        for (int d2 = 1; d2 <= j; d2++) {
+                            for (int c = j+1; c <= i; c++) {
+                                if (c < j+1 || c > i) continue;
+                                ArrayList<Point> subList = new ArrayList<>();
+                                for (int sub = j+1; sub <= i; sub++) {
+                                    subList.add(new Point(points.get(sub)));
+                                }
+                                Map<Integer, Solution> aroraSolution = aroraSubRoutine(new Point(points.get(c)), new Point(points.get(d1)), subList, k1);
+                                for (int k2 = 2; k2 <= Math.min(k1 - 1, j); k2++) {
+                                    if (i - j < k1 - k2 || d1 - c + 1 < k1 - k2 || isNull(aroraSolution.get(k1 - k2))) continue;
+                                    GottliebKey tempKey = new GottliebKey(points.get(j), points.get(d2), k2);
+                                    Solution tempSolution = v.get(tempKey);
+                                    if (!isNull(tempSolution)) {
+                                        double x = tempSolution.getLength() + SegmentUtils.euclideanDistance(points.get(d2), points.get(c)) + aroraSolution.get(k1 - k2).getLength();
+                                        if (x < best) best = x;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (best < Double.MAX_VALUE) {
+                        v.put(goal, new Solution(best, null, 0, 0, true, null));
+                    }
+                }
+            }
+        }
         int x = 1;
-//        while (counter < points.size()) {
-//            for (int i = pauseIndex; i < points.size(); i++) {
-//                for (int d = pauseIndex; d < i; d++) {
-//                    for (int k1 = 0; k1 < i-d; k1++) {
-//                        GottliebKey lead = new GottliebKey(points.get(i), points.get(d), k1);
-//                        System.out.println(lead);
-//                        //v(points.get(i), points.get(d), k1)
-//                        double best = -1;
-//                        for (int j = 0; j < i; j++) {
-//                            for (int d2 = 0; d2 < j; d2++) {
-//                                for (int k2 = 0; k2 < k1; k2++) {
-//                                    GottliebKey key = new GottliebKey(points.get(j), points.get(d2), k2);
-//                                    System.out.println("     " + key);
-//                                    for (int c = j+1; c < i+1; c++) {
-//                                        System.out.println("          " + c);
-//                                        List<Point> sub = points.subList(j+1, i+1);
-//                                        if (k1-k2 > sub.size()) continue;
-//                                        Solution s = v.get(key);
-//                                        Solution partial = aroraSubRoutine(points.get(c), points.get(d), sub, k1-k2);
-//                                        if (!isNull(s) && !isNull(partial)) {
-//                                            s.setLength(v.get(key).getLength() +
-//                                                    SegmentUtils.euclideanDistance(points.get(d2), points.get(c)) +
-//                                                    partial.getLength());
-//                                            v.put(lead, s);
-//                                        }
-//                                    }
-//
-//                                }
-//                            }
-//                        }
-//                    }
-//                }
-//            }
-//            counter++;
-//        }
     }
 
     private static Map<Integer, Solution> aroraSubRoutine(Point start, Point end, List<Point> points, int townNumber) {
@@ -107,7 +119,7 @@ public class Gottlieb {
         for (Point point : points) {
             copy.add(new Point(point));
         }
-        PreProcessingPhase preProcessingPhaseInstance = new PreProcessingPhase(copy, 0.01);
+        PreProcessingPhase preProcessingPhaseInstance = new PreProcessingPhase(copy, 1);
         preProcessingPhaseInstance.preprocess();
         return Arora.calculateWithEndpoints(preProcessingPhaseInstance, 1, copy, preProcessingPhaseInstance.getClusters(), false, start, end, points.size());
     }
