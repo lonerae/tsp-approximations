@@ -131,7 +131,10 @@ public class Main {
             }
             return avgPerfomance;
         } else {
-            Gottlieb.calculate(points.get(2), points.get(0), points);
+            Solution finalSolution = Gottlieb.calculate(points.get(2), points.get(0), points);
+            if (!isNull(finalSolution)) {
+                plotGraphs(String.valueOf(finalSolution.getSequence().size()), finalSolution, 1.0, 1);
+            }
             return -1;
         }
     }
