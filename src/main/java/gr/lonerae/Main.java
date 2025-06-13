@@ -42,7 +42,8 @@ public class Main {
 //        solvedInstances.put("pr76", 108159);
 //        solvedInstances.put("rat195", 2323);
 //        solvedInstances.put("st70", 675);
-        solvedInstances.put("test2", 0);
+        solvedInstances.put("test", 0);
+//        solvedInstances.put("test2", 0);
         return solvedInstances;
     }
 
@@ -132,6 +133,7 @@ public class Main {
             return avgPerfomance;
         } else {
             Solution finalSolution = Gottlieb.calculate(points.get(2), points.get(0), points);
+            LOGGER.log(Level.INFO, finalSolution.getLength());
             if (!isNull(finalSolution)) {
                 plotGraphs(String.valueOf(finalSolution.getSequence().size()), finalSolution, 1.0, 1);
             }

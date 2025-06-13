@@ -1,8 +1,10 @@
 package gr.lonerae;
 
 import gr.lonerae.model.Point;
+import gr.lonerae.model.Segment;
 import gr.lonerae.model.Solution;
 import gr.lonerae.phases.arora.PreProcessingPhase;
+import gr.lonerae.phases.arora.helper.Untangler;
 import gr.lonerae.phases.gottlieb.RotationPhase;
 import gr.lonerae.utils.CommonUtils;
 import gr.lonerae.utils.SegmentUtils;
@@ -19,6 +21,7 @@ import static java.util.Objects.isNull;
 public class Gottlieb {
 
     private static final Logger LOGGER = LogManager.getLogger();
+    private static final HashMap<Point, Point> corresponder = new HashMap<>();
 
     @Data
     @AllArgsConstructor
@@ -40,7 +43,6 @@ public class Gottlieb {
                     '}';
         }
     }
-    private static Map<AroraKey, Double> aroraSolutions = new HashMap<>();
 
     @Data
     @AllArgsConstructor
@@ -68,18 +70,37 @@ public class Gottlieb {
         rotationPhase.rotateOnEndpointAxis();
         // Sort by ascending x
         points.sort(Comparator.comparingDouble(Point::getX));
+        for (Point point : points) {
+            corresponder.put(new Point(point), new Point(point.getOriginal()));
+        }
         // Base of v
         GottliebKey base = new GottliebKey(start, start, 1);
         orienteeringSolutions.put(base, new Solution(0, new ArrayList<>(List.of(start)), 0, 0, true, null));
         iteratePointsBeforeStart(start, points);
         iteratePointsAfterStart(start, points);
         GottliebKey finalKey = new GottliebKey(end, end, points.size());
-        return orienteeringSolutions.get(finalKey);
+        Solution finalSolution = orienteeringSolutions.get(finalKey);
+        ArrayList<Point> actualSequence = new ArrayList<>(finalSolution.getSequence().stream().map(corresponder::get).toList());
+        Untangler.untangle(actualSequence);
+        double actualBest = 0;
+        Point previousTown = null;
+        for (Point town : actualSequence) {
+            if (isNull(previousTown)) {
+                previousTown = town;
+                continue;
+            }
+            actualBest += SegmentUtils.euclideanDistance(previousTown, town);
+            previousTown = town;
+        }
+        double xDimension = actualSequence.stream().max(Comparator.comparingDouble(Point::getX)).get().getX() - actualSequence.stream().min(Comparator.comparingDouble(Point::getX)).get().getX();
+        double yDimension = actualSequence.stream().max(Comparator.comparingDouble(Point::getY)).get().getY() - actualSequence.stream().min(Comparator.comparingDouble(Point::getY)).get().getY();
+        return new Solution(actualBest, actualSequence, 0, 0, true, new double[]{xDimension, yDimension});
     }
 
     private static void iteratePointsBeforeStart(Point start, List<Point> points) {
         List<Point> initialWindow = points.subList(0, points.indexOf(start) + 1);
-        for (int i = 0; i < points.indexOf(start); i++) {
+        int startIndex = points.indexOf(start);
+        for (int i = 0; i < startIndex; i++) {
             List<Point> initialWindowCopy = new ArrayList<>();
             for (Point point : initialWindow) initialWindowCopy.add(new Point(point));
             Map<Integer, Solution> solutions = aroraSubRoutine(new Point(start), new Point(points.get(i)), initialWindowCopy, initialWindow.size());
@@ -94,7 +115,7 @@ public class Gottlieb {
         GottliebKey base;
         int index = points.indexOf(start);
         for (int i = index + 1; i < points.size(); i++) {
-            LOGGER.log(Level.INFO, "WINDOW OF P(" + i + ")");
+            LOGGER.log(Level.INFO, "WINDOW OF P({})", i);
             // Dummy entry
             base = new GottliebKey(points.get(i), start, 1);
             orienteeringSolutions.put(base, new Solution(0, new ArrayList<>(List.of(start)), 0, 0, true, null));
@@ -104,7 +125,7 @@ public class Gottlieb {
 
     private static void calculateForAllDestinationsInWindow(Point start, List<Point> points, int index, int i) {
         for (int d1 = index + 1; d1 <= i; d1++) {
-            LOGGER.log(Level.INFO, "    DESTINATION P(" + d1 + ")");
+            LOGGER.log(Level.INFO, "    DESTINATION P({}})", d1);
             // 2-town-paths include only the start and the current town
             GottliebKey goal = new GottliebKey(points.get(i), points.get(d1), 2);
             orienteeringSolutions.put(goal, new Solution(SegmentUtils.euclideanDistance(start, points.get(d1)), new ArrayList<>(List.of(start, points.get(d1))), 0, 0, true, null));
@@ -115,7 +136,7 @@ public class Gottlieb {
     private static void calculateForAllNumberOfTowns(List<Point> points, int index, int i, int d1) {
         GottliebKey goal;
         for (int k1 = 3; k1 <= i + 1; k1++) {
-            LOGGER.log(Level.INFO, "        NUMBER OF TOWNS: " + k1);
+            LOGGER.log(Level.INFO, "        NUMBER OF TOWNS: {}", k1);
             goal = new GottliebKey(points.get(i), points.get(d1), k1);
             double best = Double.MAX_VALUE;
             ArrayList<Point> bestSequence = new ArrayList<>();
@@ -145,9 +166,7 @@ public class Gottlieb {
             }
             // At least one solution found
             if (best < Double.MAX_VALUE) {
-                double xDimension = bestSequence.stream().max(Comparator.comparingDouble(Point::getX)).get().getX() - bestSequence.stream().min(Comparator.comparingDouble(Point::getX)).get().getX();
-                double yDimension = bestSequence.stream().max(Comparator.comparingDouble(Point::getY)).get().getY() - bestSequence.stream().min(Comparator.comparingDouble(Point::getY)).get().getY();
-                orienteeringSolutions.put(goal, new Solution(best, new ArrayList<>(bestSequence), 0, 0, true, new double[]{xDimension, yDimension}));
+                orienteeringSolutions.put(goal, new Solution(best, new ArrayList<>(bestSequence), 0, 0, true, null));
             }
         }
     }

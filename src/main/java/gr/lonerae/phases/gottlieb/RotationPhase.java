@@ -3,7 +3,6 @@ package gr.lonerae.phases.gottlieb;
 import gr.lonerae.model.Point;
 import lombok.AllArgsConstructor;
 
-import java.util.Comparator;
 import java.util.List;
 
 @AllArgsConstructor
@@ -17,6 +16,7 @@ public class RotationPhase {
         double yDisplacement = start.getY();
         // Set start as the origin
         for (Point point : points) {
+            point.setOriginal(new Point(point));
             point.setX(point.getX() - xDisplacement);
             point.setY(point.getY() - yDisplacement);
         }
