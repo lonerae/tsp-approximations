@@ -18,18 +18,7 @@ public class SegmentUtils {
         Double l2 = calculateSlope(s2);
         if ((!isNull(l1) && !isNull(l2) && (Double.compare(l1, l2) == 0 || l1.doubleValue() == l2.doubleValue())) || (isNull(l1) && isNull(l2))) return false;
         Point intersection = null;
-        if (!isNull(l1) && !isNull(l2)) {
-            double b1 = s1.getStart().getY() - l1 * s1.getStart().getX();
-            double b2 = s2.getStart().getY() - l2 * s2.getStart().getX();
-            double x = (b2-b1)/(l1-l2);
-            intersection = new Point(x, l1*x+b1);
-        } else if (isNull(l1)) {
-            double b2 = s2.getStart().getY() - l2 * s2.getStart().getX();
-            intersection = new Point(s1.getStart().getX(), l2*s1.getStart().getX()+b2);
-        } else if (isNull(l2)) {
-            double b1 = s1.getStart().getY() - l1 * s1.getStart().getX();
-            intersection = new Point(s2.getStart().getX(), l1*s2.getStart().getX()+b1);
-        }
+        intersection = findIntersection(s1, s2, l1, l2);
         if (!withEdge) return pointInSegment(s1, intersection) && pointInSegment(s2, intersection);
         else {
             if (pointInSegment(s1, intersection) && pointInSegment(s2, intersection)) {
@@ -46,6 +35,23 @@ public class SegmentUtils {
             allowEdgeIntersection = true;
             return false;
         }
+    }
+
+    private static Point findIntersection(Segment s1, Segment s2, Double l1, Double l2) {
+        Point intersection;
+        if (!isNull(l1) && !isNull(l2)) {
+            double b1 = s1.getStart().getY() - l1 * s1.getStart().getX();
+            double b2 = s2.getStart().getY() - l2 * s2.getStart().getX();
+            double x = (b2-b1)/(l1 - l2);
+            intersection = new Point(x, l1 *x+b1);
+        } else if (isNull(l1)) {
+            double b2 = s2.getStart().getY() - l2 * s2.getStart().getX();
+            intersection = new Point(s1.getStart().getX(), l2 * s1.getStart().getX()+b2);
+        } else {
+            double b1 = s1.getStart().getY() - l1 * s1.getStart().getX();
+            intersection = new Point(s2.getStart().getX(), l1 * s2.getStart().getX()+b1);
+        }
+        return intersection;
     }
 
     private static Double calculateSlope(Segment segment) {

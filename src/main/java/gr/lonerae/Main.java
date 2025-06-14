@@ -133,7 +133,8 @@ public class Main {
             return avgPerfomance;
         } else {
             Solution finalSolution = Gottlieb.calculate(points.get(2), points.get(0), points);
-            LOGGER.log(Level.INFO, finalSolution.getLength());
+            LOGGER.log(Level.INFO, "***************");
+            LOGGER.log(Level.INFO, "LENGTH OF GOTTLIEB SOLUTION: {}", finalSolution.getLength());
             if (!isNull(finalSolution)) {
                 plotGraphs(String.valueOf(finalSolution.getSequence().size()), finalSolution, 1.0, 1);
             }
@@ -177,16 +178,7 @@ public class Main {
 
     private static Map<Integer, Solution> solveInstanceForChosenEAndPortalsPerSide(double e, List<Point> points, int portals, PreProcessingPhase preProcessingPhaseInstance) {
         LOGGER.log(Level.INFO, "PORTALS: {}", portals);
-        Map<Integer, Solution> currentRes = Arora.calculate(preProcessingPhaseInstance, portals, points, preProcessingPhaseInstance.getClusters(), true);
-//        if (isNull(currentRes)) {
-//            res.setBest(true);
-//            return res;
-//        } else {
-//            currentRes.setPortalsPerSide(portals);
-//            currentRes.setE(e);
-//        }
-//        if (isNull(res) || res.getLength() > currentRes.getLength()) res = currentRes;
-        return currentRes;
+        return Arora.calculateWithEndpoints(preProcessingPhaseInstance, portals, points, preProcessingPhaseInstance.getClusters(), true, new Point(0,0), new Point(16,20), preProcessingPhaseInstance.getTowns().size());
     }
 
     private static void plotGraphs(String key, Solution res, Double e, Integer portalsPerNodeSide) {

@@ -4,11 +4,12 @@ import gr.lonerae.model.Point;
 import gr.lonerae.model.QuadNode;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class QuadTreeUtils {
     private QuadTreeUtils() {}
 
-    public static ArrayList<Point> getQuadNodeCorners(QuadNode node) {
+    public static List<Point> getQuadNodeCorners(QuadNode node) {
         ArrayList<Point> corners = new ArrayList<>();
         corners.add(node.getLowerLeftCorner());
         corners.add(PointUtils.shiftXY(node.getLowerLeftCorner(), node.getSide(), 0));
@@ -17,7 +18,7 @@ public class QuadTreeUtils {
         return corners;
     }
 
-    public static ArrayList<Point> getQuadNodePortals(QuadNode node, int numOfPortals) {
+    public static List<Point> getQuadNodePortals(QuadNode node, int numOfPortals) {
         ArrayList<Point> portals = new ArrayList<>();
         for (int i = 0; i < numOfPortals; i++) {
             portals.add(PointUtils.shiftXY(node.getLowerLeftCorner(), ((i+1) * node.getSide()) / (numOfPortals + 1), 0));

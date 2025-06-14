@@ -85,10 +85,10 @@ public class QuadtreePhase {
     private void updateCornersAndPortals(QuadNode node) {
         quadNodes.add(node);
         // Update corners
-        ArrayList<Point> nodeCorners = QuadTreeUtils.getQuadNodeCorners(node);
+        ArrayList<Point> nodeCorners = new ArrayList<>(QuadTreeUtils.getQuadNodeCorners(node));
         corners.addAll(nodeCorners);
         // Update portals
-        ArrayList<Point> nodePortals = QuadTreeUtils.getQuadNodePortals(node, portalsPerNodeSide);
+        ArrayList<Point> nodePortals = new ArrayList<>(QuadTreeUtils.getQuadNodePortals(node, portalsPerNodeSide));
         for (Point portal : nodePortals) {
             if (portal.getX() != 0 && portal.getY() != 0 && portal.getX() != root.getSide() && portal.getY() != root.getSide()) {
                 portals.add(portal);
@@ -99,7 +99,7 @@ public class QuadtreePhase {
 
     private void assignPortalsToQuadNodes() {
         for (QuadNode node : quadNodes) {
-            ArrayList<Point> nodePortals = QuadTreeUtils.getQuadNodePortals(node, portalsPerNodeSide);
+            ArrayList<Point> nodePortals = new ArrayList<>(QuadTreeUtils.getQuadNodePortals(node, portalsPerNodeSide));
             for (Point possiblePortal : nodePortals) {
                 divide(possiblePortal, node, 0);
             }

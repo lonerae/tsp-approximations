@@ -210,10 +210,6 @@ public class PathFinder implements Runnable {
                 result.get(point).remove(champion.get());
                 result.get(point).add(solution);
                 solutions.add(solution);
-                // TODO: optimize more
-                // if (SegmentUtils.commonEdges(new Segment(solution.getEntrance(), solution.getExit(), false), new Segment(champion.get().getEntrance(), champion.get().getExit(), false))) {
-                // solutions.remove(champion.get());
-//  }
             }
         }
     }
@@ -225,7 +221,7 @@ public class PathFinder implements Runnable {
         private int towns;
     }
 
-    Map<Key, Double> test = new HashMap();
+    Map<Key, Double> test = new HashMap<>();
     private List<Segment> updateSegments() {
         List<Segment> segments = new ArrayList<>();
         for (Path path : solutions) {

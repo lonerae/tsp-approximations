@@ -278,7 +278,6 @@ public class PathFindingPhase {
 
     private void transformSolutions(boolean verbose, Map<Integer, Solution> kTspSolutions) {
         for (Path solution : winners) {
-//            if (solution.getSegments().stream().map(x -> x.getTowns().size()).reduce(0, Integer::sum) != 10) continue;
             transformSolution(verbose, kTspSolutions, solution);
             onLinePoints.clear();
         }
@@ -316,7 +315,6 @@ public class PathFindingPhase {
     }
 
     private void assignLengthToSolution(boolean verbose, Map<Integer, Solution> kTspSolutions, ArrayList<Point> sequence) {
-        // todo: shouldn't happen
         if (!sequence.contains(end.getOriginal())) return;
         Untangler.untangle(sequence);
         fixFinalSegment(sequence);

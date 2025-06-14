@@ -21,11 +21,11 @@ public class QuadNode {
     private int traversed;
 
     public List<Segment> getSegment(Point start, Point end) {
-        List<Segment> segments = new ArrayList<>();
+        List<Segment> currentSegments = new ArrayList<>();
         for (Segment segment : segmentsByEntrance.get(start)) {
-            if (segment.getStart().equals(end) || segment.getEnd().equals(end)) segments.add(segment);
+            if (segment.getStart().equals(end) || segment.getEnd().equals(end)) currentSegments.add(segment);
         }
-        return segments;
+        return currentSegments;
     }
 
     @Override
