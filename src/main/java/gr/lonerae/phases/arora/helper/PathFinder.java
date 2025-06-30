@@ -216,7 +216,7 @@ public class PathFinder implements Runnable {
 
     @Data
     @AllArgsConstructor
-    private class Key {
+    private static class Key {
         private Segment segment;
         private int towns;
     }

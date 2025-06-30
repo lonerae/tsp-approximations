@@ -43,7 +43,7 @@ public class FileUtils {
             String line = br.readLine();
             while (line != null) {
                 String[] parts = line.trim().split("\\s+");
-                points.add(new Point(Double.parseDouble(parts[0]), Double.parseDouble(parts[1])));
+                points.add(new Point(Double.parseDouble(parts[0]), Double.parseDouble(parts[1]), parts.length > 2 ? Integer.parseInt(parts[2]) : 1));
                 line = br.readLine();
             }
             return points;

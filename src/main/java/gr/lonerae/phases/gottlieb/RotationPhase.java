@@ -33,8 +33,8 @@ public class RotationPhase {
             }
             double oldX = point.getX();
             double oldY = point.getY();
-            point.setX(Math.round((oldX * cos - oldY * sin) * Math.pow(10,14)) / Math.pow(10,14) + xDisplacement);
-            point.setY(Math.round((oldY * cos + oldX * sin) * Math.pow(10,14)) / Math.pow(10,14));
+            point.setX(Math.round((oldX * cos - oldY * sin) * Math.pow(10,13)) / Math.pow(10,13) + xDisplacement);
+            point.setY(Math.round((oldY * cos + oldX * sin) * Math.pow(10,13)) / Math.pow(10,13));
         }
     }
 }

@@ -48,6 +48,7 @@ public class PathFindingPhase {
         this.start = start;
         this.end = end;
         boolean success = calculateQuadNodePaths(quadtreePhaseInstance);
+        LOGGER.log(Level.INFO, "Node paths calculated!");
         if (success) {
             this.townsGoal = k;
             ArrayList<QuadNode> unvisitedNodes = new ArrayList<>(iteratedNodes.stream().filter(node -> node.getSide() == squareSize / 2).toList());
@@ -224,9 +225,11 @@ public class PathFindingPhase {
     private void updateSolutionMap(int currentTownNumber, Path path) {
         if (isNull(solutionMap.get(currentTownNumber))) {
             solutionMap.put(currentTownNumber, path);
+            LOGGER.log(Level.INFO, "Solution for {} towns found!", currentTownNumber);
         }
         else if (solutionMap.get(currentTownNumber).getLength() > path.getLength()) {
             solutionMap.replace(currentTownNumber, path);
+            LOGGER.log(Level.INFO, "Better solution for {} towns found!", currentTownNumber);
         }
     }
 

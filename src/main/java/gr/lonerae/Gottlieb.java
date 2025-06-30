@@ -1,12 +1,12 @@
 package gr.lonerae;
 
 import gr.lonerae.model.Point;
-import gr.lonerae.model.Segment;
 import gr.lonerae.model.Solution;
 import gr.lonerae.phases.arora.PreProcessingPhase;
 import gr.lonerae.phases.arora.helper.Untangler;
 import gr.lonerae.phases.gottlieb.RotationPhase;
 import gr.lonerae.utils.CommonUtils;
+import gr.lonerae.utils.PointUtils;
 import gr.lonerae.utils.SegmentUtils;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -123,6 +123,7 @@ public class Gottlieb {
             LOGGER.log(Level.INFO, "        NUMBER OF TOWNS: {}", k1);
             goal = new GottliebKey(points.get(i), points.get(d1), k1);
             double best = Double.MAX_VALUE;
+            int bestScore = Integer.MIN_VALUE;
             ArrayList<Point> bestSequence = new ArrayList<>();
             for (int j = index; j <= i; j++) {
                 if (d1 < j+1) continue;
@@ -136,12 +137,15 @@ public class Gottlieb {
                             if (orienteeringSolutions.containsKey(tempKey)) {
                                 Solution tempSolution = orienteeringSolutions.get(tempKey);
                                 Solution aroraSolution = aroraSolutions.get(k1 - k2);
+                                ArrayList<Point> tempSequence = new ArrayList<>(tempSolution.getSequence());
+                                tempSequence.addAll(new ArrayList<>(aroraSolution.getSequence()));
+                                tempSequence = new ArrayList<>(new LinkedHashSet<>(tempSequence));
+                                int y = PointUtils.getTotalPlurality(tempSequence.stream().map(corresponder::get).toList());
                                 double x = tempSolution.getLength() + SegmentUtils.euclideanDistance(points.get(d2), points.get(c)) + aroraSolution.getLength();
-                                if (x < best && (aroraSolution.getSequence().getLast().equals(points.get(d1)))) {
+                                if ((y > bestScore || (y == bestScore && x < best)) && (tempSequence.getLast().equals(points.get(d1)))) {
                                     best = x;
-                                    bestSequence = tempSolution.getSequence();
-                                    bestSequence.addAll(aroraSolution.getSequence());
-                                    bestSequence = new ArrayList<>(new LinkedHashSet<>(bestSequence));
+                                    bestScore = y;
+                                    bestSequence = new ArrayList<>(tempSequence);
                                 }
                             }
                         }
@@ -166,8 +170,13 @@ public class Gottlieb {
     }
 
     private static Solution manipulateFinalSolution(Point end, List<Point> points) {
-        GottliebKey finalKey = new GottliebKey(end, end, points.size());
-        Solution finalSolution = orienteeringSolutions.get(finalKey);
+        List<Solution> possibleSolutions = orienteeringSolutions.entrySet().stream().filter(x -> x.getKey().getEnd().equals(end)).map(Map.Entry::getValue).toList();
+        Solution finalSolution = null;
+        for (Solution tempSolution : possibleSolutions) {
+            if (isNull(finalSolution) || PointUtils.getTotalPlurality(tempSolution.getSequence().stream().map(corresponder::get).toList()) > PointUtils.getTotalPlurality(finalSolution.getSequence().stream().map(corresponder::get).toList())) {
+                finalSolution = tempSolution;
+            }
+        }
         ArrayList<Point> actualSequence = new ArrayList<>(finalSolution.getSequence().stream().map(corresponder::get).toList());
         Untangler.untangle(actualSequence);
         double actualBest = 0;

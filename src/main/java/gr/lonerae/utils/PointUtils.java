@@ -2,6 +2,8 @@ package gr.lonerae.utils;
 
 import gr.lonerae.model.Point;
 
+import java.util.List;
+
 public class PointUtils {
     private PointUtils() {}
 
@@ -13,5 +15,9 @@ public class PointUtils {
         int result = Double.compare(p1.getX(), p2.getX());
         if (result==0) result = Double.compare(p1.getY(), p2.getY());
         return result;
+    }
+
+    public static int getTotalPlurality(List<Point> points) {
+        return points.stream().mapToInt(Point::getPlurality).sum();
     }
 }

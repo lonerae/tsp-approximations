@@ -12,16 +12,25 @@ public class Point implements Comparable<Point> {
 
     private double x;
     private double y;
+    private int plurality;
     private Point original = null;
 
     public Point(double x, double y) {
         this.x = x;
         this.y = y;
+        this.plurality = 1;
+    }
+
+    public Point(double x, double y, int plurality) {
+        this.x = x;
+        this.y = y;
+        this.plurality = plurality;
     }
 
     public Point(Point p) {
         this.x = p.getX();
         this.y = p.getY();
+        this.plurality = p.plurality;
         this.original = p.getOriginal();
     }
 
