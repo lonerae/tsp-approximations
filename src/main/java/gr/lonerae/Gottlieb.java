@@ -65,7 +65,7 @@ public class Gottlieb {
     private Gottlieb() {
     }
 
-    public static Solution calculate(Point start, Point end, List<Point> points) {
+    public static Solution calculate(Point start, Point end, List<Point> points, double timeLimit) {
         RotationPhase rotationPhase = new RotationPhase(start, end, points);
         rotationPhase.rotateOnEndpointAxis();
         // Sort by ascending x
@@ -78,7 +78,7 @@ public class Gottlieb {
         orienteeringSolutions.put(base, new Solution(0, new ArrayList<>(List.of(start)), 0, 0, true, null));
         iteratePointsBeforeStart(start, points);
         iteratePointsAfterStart(start, points);
-        return manipulateFinalSolution(end, points);
+        return manipulateFinalSolution(end, points, timeLimit);
     }
 
     private static void iteratePointsBeforeStart(Point start, List<Point> points) {
@@ -169,14 +169,16 @@ public class Gottlieb {
         return Arora.calculateWithEndpoints(preProcessingPhaseInstance, 1, copy, preProcessingPhaseInstance.getClusters(), false, start, end, points.size());
     }
 
-    private static Solution manipulateFinalSolution(Point end, List<Point> points) {
+    private static Solution manipulateFinalSolution(Point end, List<Point> points, double timeLimit) {
         List<Solution> possibleSolutions = orienteeringSolutions.entrySet().stream().filter(x -> x.getKey().getEnd().equals(end)).map(Map.Entry::getValue).toList();
         Solution finalSolution = null;
         for (Solution tempSolution : possibleSolutions) {
+            if (tempSolution.getLength() > timeLimit) continue;
             if (isNull(finalSolution) || PointUtils.getTotalPlurality(tempSolution.getSequence().stream().map(corresponder::get).toList()) > PointUtils.getTotalPlurality(finalSolution.getSequence().stream().map(corresponder::get).toList())) {
                 finalSolution = tempSolution;
             }
         }
+        if (isNull(finalSolution)) return null;
         ArrayList<Point> actualSequence = new ArrayList<>(finalSolution.getSequence().stream().map(corresponder::get).toList());
         Untangler.untangle(actualSequence);
         double actualBest = 0;

@@ -11,10 +11,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.swing.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.IOException;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.Objects.isNull;
@@ -22,6 +20,7 @@ import static java.util.Objects.isNull;
 public class Main {
     private static boolean isTSP;
 
+    private static final Properties prop = new Properties();
     private static final Logger LOGGER = LogManager.getLogger();
 
     private static Map<String, Integer> initializeTSPInstances() {
@@ -92,6 +91,13 @@ public class Main {
         else if ("gottlieb".equals(args[0])) isTSP = false;
         else return;
 
+        try {
+            prop.load(Main.class.getClassLoader().getResourceAsStream("messages.properties"));
+        }
+        catch (IOException ex) {
+            ex.printStackTrace();
+        }
+
         if (isTSP) solvedInstances = initializeTSPInstances();
         else solvedInstances = initializeOrienteeringInstances();
 
@@ -132,11 +138,14 @@ public class Main {
             }
             return avgPerfomance;
         } else {
-            Solution finalSolution = Gottlieb.calculate(points.get(0), points.get(1), points);
             LOGGER.log(Level.INFO, "***************");
-            LOGGER.log(Level.INFO, "LENGTH OF GOTTLIEB SOLUTION: {}", finalSolution.getLength());
+            Solution finalSolution = Korula.calculate(points);
             if (!isNull(finalSolution)) {
+                LOGGER.log(Level.INFO, "LENGTH OF GOTTLIEB SOLUTION: {}", finalSolution.getLength());
                 plotGraphs(String.valueOf(finalSolution.getSequence().size()), finalSolution, 1.0, 1);
+            } else {
+                String message = prop.getProperty("no_solution_found_error");
+                LOGGER.log(Level.INFO, message);
             }
             return -1;
         }
