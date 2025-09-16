@@ -26,7 +26,11 @@ public class FileUtils {
             String line = br.readLine();
             while (line != null) {
                 String[] parts = line.trim().split("\\s+");
-                points.add(new Point(Double.parseDouble(parts[1]), Double.parseDouble(parts[2])));
+                if (parts.length == 3) {
+                    points.add(new Point(Double.parseDouble(parts[1]), Double.parseDouble(parts[2])));
+                } else {
+                    points.add(new Point(Double.parseDouble(parts[0]), Double.parseDouble(parts[1])));
+                }
                 line = br.readLine();
             }
             return points;

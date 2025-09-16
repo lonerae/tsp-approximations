@@ -102,10 +102,12 @@ public class PathFinder implements Runnable {
                     node.getSegments().add(segmentWithTown);
                     updateSegments(node, segmentWithTown);
                 }
-                Segment segment = new Segment(node.getPortals().get(i), node.getPortals().get(j), true);
-                segment.setLength(SegmentUtils.getPathLength(segment));
-                node.getSegments().add(segment);
-                updateSegments(node, segment);
+                if (node.getTowns().isEmpty() || !isNull(start)) {
+                    Segment segment = new Segment(node.getPortals().get(i), node.getPortals().get(j), true);
+                    segment.setLength(SegmentUtils.getPathLength(segment));
+                    node.getSegments().add(segment);
+                    updateSegments(node, segment);
+                }
             }
         }
     }

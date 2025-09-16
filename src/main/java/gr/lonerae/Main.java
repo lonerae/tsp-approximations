@@ -19,6 +19,8 @@ import static java.util.Objects.isNull;
 
 public class Main {
     private static boolean isTSP;
+    private static boolean isKTSP;
+    private static boolean isOrienteering;
 
     private static final Properties prop = new Properties();
     private static final Logger LOGGER = LogManager.getLogger();
@@ -43,25 +45,26 @@ public class Main {
         solvedInstances.put("st70", 675);
 //        solvedInstances.put("test", 0);
 //        solvedInstances.put("test2", 0);
+//        solvedInstances.put("set64", 0);
         return solvedInstances;
     }
 
     private static Map<String, Integer> initializeOrienteeringInstances() {
         Map<String, Integer> solvedInstances = new HashMap<>();
-//        solvedInstances.put("set64", 80);
+        solvedInstances.put("set64", 80);
 //        solvedInstances.put("set66", 130);
 //        solvedInstances.put("tsiligirides1", 85);
 //        solvedInstances.put("tsiligirides2", 45);
 //        solvedInstances.put("tsiligirides3", 110);
-        solvedInstances.put("test", 0);
+//        solvedInstances.put("test", 0);
 //        solvedInstances.put("test2", 0);
         return solvedInstances;
     }
 
     private static List<Double> initializeEValues() {
         List<Double> eValues = new ArrayList<>();
-        eValues.add(1.0);
-//        eValues.add(0.5);
+//        eValues.add(1.0);
+        eValues.add(0.5);
 //        eValues.add(0.2);
 //        eValues.add(0.1);
 //        eValues.add(0.01);
@@ -71,10 +74,10 @@ public class Main {
     private static List<Integer> initializePortalsPerNodeSide() {
         List<Integer> portalsPerNodeSide = new ArrayList<>();
         portalsPerNodeSide.add(1);
-        portalsPerNodeSide.add(2);
+//        portalsPerNodeSide.add(2);
 //        portalsPerNodeSide.add(3);
 //        portalsPerNodeSide.add(4);
-        portalsPerNodeSide.add(5);
+//        portalsPerNodeSide.add(5);
 //        portalsPerNodeSide.add(6);
 //        portalsPerNodeSide.add(7);
 //        portalsPerNodeSide.add(8);
@@ -87,9 +90,14 @@ public class Main {
         if (args.length == 0) return;
 
         Map<String, Integer> solvedInstances;
-        if ("arora".equals(args[0])) isTSP = true;
-        else if ("gottlieb".equals(args[0])) isTSP = false;
-        else return;
+        switch (args[0]) {
+            case "tsp" -> isTSP = true;
+            case "ktsp" -> isKTSP = true;
+            case "orienteering" -> isOrienteering = true;
+            case null, default -> {
+                return;
+            }
+        }
 
         try {
             prop.load(Main.class.getClassLoader().getResourceAsStream("messages.properties"));
@@ -98,7 +106,7 @@ public class Main {
             ex.printStackTrace();
         }
 
-        if (isTSP) solvedInstances = initializeTSPInstances();
+        if (isTSP || isKTSP) solvedInstances = initializeTSPInstances();
         else solvedInstances = initializeOrienteeringInstances();
 
         List<Double> eValues = initializeEValues();
@@ -119,13 +127,29 @@ public class Main {
         LOGGER.log(Level.INFO, "INSTANCE: {}", entry.getKey());
 
         List<Point> points;
-        if (isTSP) points = FileUtils.readTSPInstance(entry.getKey());
+        if (isTSP || isKTSP) points = FileUtils.readTSPInstance(entry.getKey());
         else points = FileUtils.readOrienteeringInstance(entry.getKey());
 
         List<Point> original = new ArrayList<>();
         for (Point point : points) original.add(new Point(point.getX(), point.getY()));
 
         if (isTSP) {
+            Solution res = null;
+            ArrayList<Integer> opt = new ArrayList<>();
+            for (double e : eValues) {
+                res = solveInstanceForChosenE(portalsPerNodeSide, e, points, res);
+            }
+            if (!isNull(res)) {
+                double optimal = solvedInstances.get(entry.getKey());
+                LOGGER.log(Level.INFO, "OPTIMAL: {}", optimal);
+                double performance = -1 * CommonUtils.round((res.getLength() - optimal) * 100 / optimal);
+                avgPerfomance += performance;
+                LOGGER.log(Level.INFO, "PERFORMANCE: {}%", performance);
+                LOGGER.log(Level.INFO, "BEST SOLUTION: {}%", res.getLength());
+                plotGraphs(entry.getKey(), res, res.getDimensions(), original, opt, res.getE(), res.getPortalsPerSide());
+            }
+            return avgPerfomance;
+        } else if (isKTSP) {
             Map<Integer, Solution> res = null;
             for (double e : eValues) {
                 res = solveInstanceForChosenE(portalsPerNodeSide, e, points, res);
@@ -149,6 +173,24 @@ public class Main {
             }
             return -1;
         }
+    }
+
+    private static Solution solveInstanceForChosenE(List<Integer> portalsPerNodeSide, double e, List<Point> points, Solution res) {
+        double[] dimensions;
+        LOGGER.log(Level.INFO, "E: {}", e);
+        List<Point> pointsCopy = new ArrayList<>();
+        for (Point point : points) {
+            pointsCopy.add(new Point(point.getX(), point.getY()));
+        }
+        PreProcessingPhase preProcessingPhaseInstance = new PreProcessingPhase(pointsCopy, e);
+        dimensions = preProcessingPhaseInstance.preprocess();
+
+        for (int portals : portalsPerNodeSide) {
+            res = solveInstanceForChosenEAndPortalsPerSide(e, points, res, portals, preProcessingPhaseInstance);
+            res.setDimensions(dimensions);
+            if (res.isBest()) break;
+        }
+        return res;
     }
 
     private static Map<Integer, Solution> solveInstanceForChosenE(List<Integer> portalsPerNodeSide, double e, List<Point> points, Map<Integer, Solution> res) {
@@ -185,15 +227,48 @@ public class Main {
         return res;
     }
 
+    private static Solution solveInstanceForChosenEAndPortalsPerSide(double e, List<Point> points, Solution res, int portals, PreProcessingPhase preProcessingPhaseInstance) {
+        LOGGER.log(Level.INFO, "PORTALS: {}", portals);
+        Solution currentRes = Arora.calculateOriginal(preProcessingPhaseInstance, portals, points, preProcessingPhaseInstance.getClusters(), true);
+        if (isNull(currentRes)) {
+            res.setBest(true);
+            return res;
+        } else {
+            currentRes.setPortalsPerSide(portals);
+            currentRes.setE(e);
+        }
+        if (isNull(res) || res.getLength() > currentRes.getLength()) res = currentRes;
+        return res;
+    }
+
     private static Map<Integer, Solution> solveInstanceForChosenEAndPortalsPerSide(double e, List<Point> points, int portals, PreProcessingPhase preProcessingPhaseInstance) {
         LOGGER.log(Level.INFO, "PORTALS: {}", portals);
-        return Arora.calculateWithEndpoints(preProcessingPhaseInstance, portals, points, preProcessingPhaseInstance.getClusters(), true, new Point(0,0), new Point(16,20), preProcessingPhaseInstance.getTowns().size());//        return Arora.calculateWithEndpoints(preProcessingPhaseInstance, portals, points, preProcessingPhaseInstance.getClusters(), true, new Point(points.get(0)), new Point(points.get(1)), preProcessingPhaseInstance.getTowns().size());
+        return Arora.calculateWithEndpoints(preProcessingPhaseInstance, portals, points, preProcessingPhaseInstance.getClusters(), true, new Point(0,-7), new Point(0,7), preProcessingPhaseInstance.getTowns().size());//        return Arora.calculateWithEndpoints(preProcessingPhaseInstance, portals, points, preProcessingPhaseInstance.getClusters(), true, new Point(points.get(0)), new Point(points.get(1)), preProcessingPhaseInstance.getTowns().size());
     }
 
     private static void plotGraphs(String key, Solution res, Double e, Integer portalsPerNodeSide) {
-        Plotter.PlotSolution plotSolution = new Plotter.PlotSolution(res.getSequence(), res.getDimensions());
+        Plotter.PlotSolution plotSolution = new Plotter.PlotSolution(res.getSequence(), res.getDimensions(), false);
         plotSolution.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
         plotSolution.setVisible(true);
         plotSolution.setTitle("k: " + res.getSequence().size() + ", e: " + e + ", portals: " + portalsPerNodeSide);
+    }
+
+    private static void plotGraphs(String key, Solution res, double[] dimensions, List<Point> original, ArrayList<Integer> opt, Double e, Integer portalsPerNodeSide) {
+        Plotter.PlotSolution plotSolution = new Plotter.PlotSolution(res.getSequence(), dimensions, true);
+        plotSolution.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
+        plotSolution.setVisible(true);
+        plotSolution.setTitle("instance: " + key + ", e: " + e + ", portals: " + portalsPerNodeSide);
+
+        List<Integer> optimalIndexes = FileUtils.readTSPOptTour(key);
+        if (!optimalIndexes.isEmpty()) {
+            ArrayList<Point> optimalSequence = new ArrayList<>();
+            for (Integer index : optimalIndexes) {
+                optimalSequence.add(original.get(index));
+            }
+            Plotter.PlotSolution plotOptimal = new Plotter.PlotSolution(optimalSequence, dimensions, true);
+            plotOptimal.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+            plotOptimal.setVisible(true);
+            plotOptimal.setTitle(key + " optimal");
+        }
     }
 }

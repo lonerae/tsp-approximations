@@ -24,6 +24,7 @@ public class Plotter {
     public static class PlotSolution extends JFrame {
         private transient ArrayList<Point> points;
         private double[] dimensions;
+        private boolean circular;
 
         @Override
         public void paint(Graphics graphics) {
@@ -34,6 +35,7 @@ public class Plotter {
             setLocationRelativeTo(null);
             setResizable(false);
             graphics2D.setStroke(new BasicStroke((float)radius));
+//            graphics2D.scale(WINDOW_SIZE / (1.5*dimensions[0]), WINDOW_SIZE / (1.5*dimensions[1]));
             graphics2D.scale(WINDOW_SIZE / dimensions[0], WINDOW_SIZE / dimensions[1]);
 
             for (int i = 0; i < points.size() - 1; i++) {
@@ -41,7 +43,8 @@ public class Plotter {
                 drawTown(points.get(i), radius, headerHeight, graphics2D, i == 0);
                 drawTown(points.get(i + 1), radius, headerHeight, graphics2D, i == 0);
             }
-            drawTown(points.getLast(), radius, headerHeight, graphics2D, true);
+            drawTown(points.getLast(), radius, headerHeight, graphics2D, !circular);
+            if (circular) drawEdge(graphics2D, points.getLast(), points.getFirst(), headerHeight);
         }
 
         private void drawEdge(Graphics2D graphics2D, Point start, Point end, double headerHeight) {

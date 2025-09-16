@@ -3,6 +3,9 @@ package gr.lonerae;
 import gr.lonerae.model.Point;
 import gr.lonerae.model.Solution;
 import gr.lonerae.utils.CommonUtils;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -10,7 +13,8 @@ import java.util.List;
 import static java.util.Objects.isNull;
 
 public class Korula {
-    private static final double TIME_LIMIT = 60;
+    private static final double TIME_LIMIT = Double.MAX_VALUE;
+    private static final Logger LOGGER = LogManager.getLogger();
 
     private Korula() {}
 
@@ -18,8 +22,11 @@ public class Korula {
         double bestLength = Double.MAX_VALUE;
         int bestTowns = 0;
         Solution bestSolution = null;
+        int i = 1;
+        bestSolution = Gottlieb.calculate(points.getFirst(), points.get(1), points, TIME_LIMIT);
         for (Point point : points) {
             if (point.getPlurality() == 0) continue;
+            LOGGER.log(Level.INFO, "KORULA ROUND {}", i);
             List<Point> pointsCopy = CommonUtils.deepCopy(points);
             int benchmark = point.getPlurality();
             List<Point> filteredPoints = filterPoints(points, pointsCopy, benchmark);
@@ -35,6 +42,7 @@ public class Korula {
                     bestLength = finalSolution.getLength();
                 }
             }
+            i++;
         }
         return bestSolution;
     }
