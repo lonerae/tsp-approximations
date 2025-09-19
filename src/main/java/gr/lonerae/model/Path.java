@@ -51,6 +51,9 @@ public class Path {
         if (segments.size() > 1) {
             for (int i = 1; i < segments.size(); i++) {
                 stringBuilder.append(" -> ");
+                for (Point town : segments.get(i).getTowns()) {
+                    stringBuilder.append(town).append(" -> ");
+                }
                 stitch = SegmentUtils.contains(segments.get(i), stitch);
                 stringBuilder.append(stitch);
             }

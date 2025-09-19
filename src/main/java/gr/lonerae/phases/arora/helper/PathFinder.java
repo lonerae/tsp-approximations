@@ -11,6 +11,10 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static java.util.Objects.isNull;
 
@@ -22,7 +26,6 @@ public class PathFinder implements Runnable {
     private QuadNode parent;
 
     private final List<Segment> singleSolution = new ArrayList<>();
-    private final List<Path> solutions = new ArrayList<>();
 
     private Point start;
     private Point end;
@@ -47,14 +50,19 @@ public class PathFinder implements Runnable {
             calculateParentPortals(node.getParent(), node.getPortals());
             QuadNode currentParent = node.getParent();
             currentParent.setTraversed(currentParent.getTraversed() + 1);
+            QuadNode finalNode = node;
             while (!isNull(currentParent) && currentParent.getTraversed() == 4) {
+                System.out.println(result.values().stream().flatMap(Collection::stream).toList().size());
+                System.out.println(currentParent + " " + currentParent.getSide());
+                iteratedNodes.add(currentParent);
                 parentPaths(currentParent);
-                List<Segment> segTest = updateSegments();
+                List<Segment> segTest = updateSegments(currentParent);
                 currentParent.setSegments(segTest);
                 for (Segment s : segTest) {
                     updateSegments(currentParent, s);
                 }
-                iteratedNodes.add(currentParent);
+                QuadNode finalCurrentParent = currentParent;
+                currentParent.setSegments(currentParent.getSegments().stream().distinct().toList());
                 if (!isNull(currentParent.getParent())) {
                     calculateParentPortals(currentParent.getParent(), currentParent.getPortals());
                     currentParent.getParent().setTraversed(currentParent.getParent().getTraversed() + 1);
@@ -117,8 +125,10 @@ public class PathFinder implements Runnable {
         List<Point> parentPortals = parent.getPortals();
         ArrayList<QuadNode> children = new ArrayList<>(parent.getChildren().values());
         for (int i = 0; i < parentPortals.size() - 1; i++) {
+            System.out.println("I: " + i + "/" + parentPortals.size());
             entrance = parentPortals.get(i);
             for (int j = i + 1; j < parentPortals.size(); j++) {
+                System.out.println("J: " + j + "/" + parentPortals.size());
                 exit = parentPortals.get(j);
                 searchChildren(entrance, children);
             }
@@ -138,6 +148,8 @@ public class PathFinder implements Runnable {
         updatedUnvisited.remove(node);
         if (!isNull(node.getSegmentsByEntrance().get(exit))) {
             for (Segment segment : node.getSegment(exit, stitch)) {
+                if (node.getTowns().contains(start) && !segment.getTowns().contains(start)) continue;
+                if (node.getTowns().contains(end) && !segment.getTowns().contains(end)) continue;
                 singleSolution.add(segment);
                 currentLength += segment.getLength();
                 savePath();
@@ -147,6 +159,8 @@ public class PathFinder implements Runnable {
 
     private void continueToNeighborNode(Point stitch, QuadNode node, ArrayList<QuadNode> updatedUnvisited) {
         for (Segment segment : node.getSegmentsByEntrance().get(stitch)) {
+            if (node.getTowns().contains(start) && !segment.getTowns().contains(start)) continue;
+            if (node.getTowns().contains(end) && !segment.getTowns().contains(end)) continue;
             // Segment contains previous vertex
             singleSolution.add(segment);
             currentLength += segment.getLength();
@@ -155,7 +169,7 @@ public class PathFinder implements Runnable {
                 savePath();
             } else if (
                     updatedUnvisited.isEmpty() ||
-                            (currentLength > bestLength && bestLength != 0) ||
+//                            (currentLength > bestLength && bestLength != 0) ||
                             this.parent.getPortals().contains(nextStitch)
             ) {
                 backtrack();
@@ -177,12 +191,6 @@ public class PathFinder implements Runnable {
         Path solution = new Path();
         solution.setEntrance(entrance);
         solution.setExit(exit);
-        for (QuadNode node : iteratedNodes) {
-            if (node.getPortals().contains(entrance) && node.getPortals().contains(exit)) {
-                solution.setNode(node);
-                break;
-            }
-        }
         for (Segment segment : singleSolution) {
             solution.addLength(segment.getLength());
             solution.addSegment(segment);
@@ -191,27 +199,45 @@ public class PathFinder implements Runnable {
                 solution.getInner().add(segment.getInner().stream().distinct().toList().getFirst());
             }
         }
-        updateMap(solution, entrance);
-        updateMap(solution, exit);
+        for (QuadNode node : iteratedNodes) {
+            if (node.getPortals().contains(entrance) && node.getPortals().contains(exit)) {
+                if (!solution.getSegments().isEmpty()) {
+                    if (
+                            (solution.getSegments().getFirst().getStart().getX() >= node.getLowerLeftCorner().getX() && solution.getSegments().getFirst().getEnd().getX() >= node.getLowerLeftCorner().getX()) &&
+                                    (solution.getSegments().getFirst().getStart().getY() >= node.getLowerLeftCorner().getY() && solution.getSegments().getFirst().getEnd().getY() >= node.getLowerLeftCorner().getY())
+                    ) {
+                        solution.setNode(node);
+                        break;
+                    }
+                } else {
+                    solution.setNode(node);
+                    break;
+                }
+            }
+        }
+        updateMap(solution, entrance, exit);
+        updateMap(solution, exit, entrance);
         Segment removed = singleSolution.removeLast();
         currentLength -= removed.getLength();
     }
 
-    private void updateMap(Path solution, Point point) {
+    private void updateMap(Path solution, Point point, Point other) {
         if (isNull(result.get(point))) {
             result.put(point, new ArrayList<>());
             result.get(point).add(solution);
-            solutions.add(solution);
         } else {
-            Optional<Path> champion = result.get(point).stream().filter(x -> x.getTownNumber() == solution.getTownNumber()).findFirst();
+            Optional<Path> champion = result.get(point).stream().filter(
+                    x ->
+                            (x.getExit().equals(other) || x.getEntrance().equals(other)) &&
+                            x.getTownNumber() == solution.getTownNumber() && x.getNode().equals(solution.getNode())
+            ).findFirst();
             if (champion.isEmpty()) {
                 result.get(point).add(solution);
-                solutions.add(solution);
-            }
-            else if (champion.get().getLength() > solution.getLength()) {
+            } else if (champion.get().getLength() > solution.getLength()
+                    || (!solution.getTowns().isEmpty() && solution.getTowns().contains(start) && !champion.get().getTowns().contains(start))
+                    || (!solution.getTowns().isEmpty() && solution.getTowns().contains(end) && !champion.get().getTowns().contains(end))) {
                 result.get(point).remove(champion.get());
                 result.get(point).add(solution);
-                solutions.add(solution);
             }
         }
     }
@@ -224,35 +250,36 @@ public class PathFinder implements Runnable {
     }
 
     Map<Key, Double> test = new HashMap<>();
-    private List<Segment> updateSegments() {
+    private List<Segment> updateSegments(QuadNode parent) {
         List<Segment> segments = new ArrayList<>();
-        for (Path path : solutions) {
-            Segment newSegment = new Segment(path.getEntrance(), path.getExit(), true);
-            newSegment.setLength(path.getLength());
-            newSegment.getTowns().addAll(path.getTowns());
-            dive(path, newSegment);
-            List<Segment> toAdd = new ArrayList<>();
-            List<Segment> toDelete = new ArrayList<>();
-            boolean gamesOn = checkIfSegmentsShouldCompete(newSegment, toDelete, toAdd);
-            if (!gamesOn) segments.add(newSegment);
-            else {
-                segments.addAll(toAdd);
-                segments.removeAll(toDelete);
-            }
-            if (newSegment.getTowns().contains(start) && newSegment.getTowns().size() > 2 && !newSegment.getTowns().getFirst().equals(start) && !newSegment.getTowns().getLast().equals(start)) {
-                Segment siblingSegment = new Segment(newSegment);
-                siblingSegment.getTowns().remove(start);
-                siblingSegment.getTowns().addFirst(start);
-                segments.add(siblingSegment);
-            }
-            if (newSegment.getTowns().contains(end) && newSegment.getTowns().size() > 2 && !newSegment.getTowns().getFirst().equals(end) && !newSegment.getTowns().getLast().equals(end)) {
-                Segment siblingSegment = new Segment(newSegment);
-                siblingSegment.getTowns().remove(end);
-                siblingSegment.getTowns().add(end);
-                segments.add(siblingSegment);
+        for (Point portal : parent.getPortals()) {
+            for (Path path : result.get(portal)) {
+                Segment newSegment = new Segment(path.getEntrance(), path.getExit(), true);
+                newSegment.setLength(path.getLength());
+                newSegment.getTowns().addAll(path.getTowns());
+                dive(path, newSegment);
+                List<Segment> toAdd = new ArrayList<>();
+                List<Segment> toDelete = new ArrayList<>();
+                boolean gamesOn = checkIfSegmentsShouldCompete(newSegment, toDelete, toAdd);
+                if (!gamesOn) segments.add(newSegment);
+                else {
+                    segments.addAll(toAdd);
+                    segments.removeAll(toDelete);
+                }
+                if (newSegment.getTowns().contains(start) && newSegment.getTowns().size() > 2 && !newSegment.getTowns().getFirst().equals(start) && !newSegment.getTowns().getLast().equals(start)) {
+                    Segment siblingSegment = new Segment(newSegment);
+                    siblingSegment.getTowns().remove(start);
+                    siblingSegment.getTowns().addFirst(start);
+                    segments.add(siblingSegment);
+                }
+                if (newSegment.getTowns().contains(end) && newSegment.getTowns().size() > 2 && !newSegment.getTowns().getFirst().equals(end) && !newSegment.getTowns().getLast().equals(end)) {
+                    Segment siblingSegment = new Segment(newSegment);
+                    siblingSegment.getTowns().remove(end);
+                    siblingSegment.getTowns().add(end);
+                    segments.add(siblingSegment);
+                }
             }
         }
-        solutions.clear();
         return segments;
     }
 

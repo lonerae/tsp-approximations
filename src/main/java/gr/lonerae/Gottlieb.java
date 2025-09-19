@@ -230,7 +230,7 @@ public class Gottlieb {
         }
         PreProcessingPhase preProcessingPhaseInstance = new PreProcessingPhase(copy, 1);
         preProcessingPhaseInstance.preprocess();
-        return Arora.calculateWithEndpoints(preProcessingPhaseInstance, 1, copy, preProcessingPhaseInstance.getClusters(), false, start, end, townNumber);
+        return Arora.calculateWithEndpoints(preProcessingPhaseInstance, 1, copy, preProcessingPhaseInstance.getClusters(), false, start, end, townNumber, true);
     }
 
     private static Solution manipulateFinalSolution(Point end, List<Point> points, double timeLimit) {

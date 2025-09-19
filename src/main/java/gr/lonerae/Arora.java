@@ -26,14 +26,14 @@ public class Arora {
         return pathFindingPhase.iterateNodes(quadtreePhaseInstance, clusters, verbose);
     }
 
-    public static Map<Integer, Solution> calculateWithEndpoints(PreProcessingPhase preProcessingPhaseInstance, int portalsPerNodeSide, List<Point> points, Map<Point, ArrayList<Point>> clusters, boolean verbose, Point start, Point end, int k) {
+    public static Map<Integer, Solution> calculateWithEndpoints(PreProcessingPhase preProcessingPhaseInstance, int portalsPerNodeSide, List<Point> points, Map<Point, ArrayList<Point>> clusters, boolean verbose, Point start, Point end, int k, boolean withEarlyFinish) {
         QuadtreePhase quadtreePhaseInstance = new QuadtreePhase(preProcessingPhaseInstance.getBoundingBoxSize(), preProcessingPhaseInstance.getTowns(), portalsPerNodeSide);
         quadtreePhaseInstance.assignPortals();
         KPathFindingPhase kPathFindingPhase = new KPathFindingPhase(preProcessingPhaseInstance.getBoundingBoxSize(), points.size(), TIME_LIMIT);
         Optional<Point> startOptional = preProcessingPhaseInstance.getTowns().stream().filter(x -> x.getOriginal().equals(start)).findFirst();
         Optional<Point> endOptional = preProcessingPhaseInstance.getTowns().stream().filter(x -> x.getOriginal().equals(end)).findFirst();
         if (startOptional.isPresent() && endOptional.isPresent()) {
-            return kPathFindingPhase.iterateNodes(quadtreePhaseInstance, clusters, verbose, true, startOptional.get(), endOptional.get(), k);
+            return kPathFindingPhase.iterateNodes(quadtreePhaseInstance, clusters, verbose, startOptional.get(), endOptional.get(), k, withEarlyFinish);
         }
         return Collections.emptyMap();
     }

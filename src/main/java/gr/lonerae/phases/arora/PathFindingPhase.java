@@ -198,8 +198,6 @@ public class PathFindingPhase {
                 i++;
             }
         }
-//        addOnLinePoints();
-//        postProcessing(new Segment(points.getLast(), points.getFirst(), false));
         explodeClusters(clusters);
     }
 
@@ -249,20 +247,9 @@ public class PathFindingPhase {
 
     private void addTownToSolution(List<Segment> tsp, int i) {
         if (!tsp.get(i).getTowns().isEmpty() && !isNull(tsp.get(i).getTowns().getFirst())) {
-//            if (points.size() > 1 && isNull(currentSegment)) currentSegment = new Segment(points.get(points.size() - 2), points.getLast(), false);
             Point candidate = tsp.get(i).getTowns().getFirst().getOriginal();
-//            if (!isNull(currentSegment) && !candidate.equals(currentSegment.getEnd()) && SegmentUtils.onLine(currentSegment, candidate)) {
-//                updateOnLinePoints(candidate);
-//            } else {
-//                addOnLinePoints();
-//                currentSegment = null;
-//                if (!points.isEmpty()) {
-//                    Segment candidateSegment = new Segment(points.getLast(), candidate, false);
-//                    postProcessing(candidateSegment);
-//                }
-                points.add(candidate);
-                visitedTowns++;
-//            }
+            points.add(candidate);
+            visitedTowns++;
         }
     }
 
@@ -434,42 +421,5 @@ public class PathFindingPhase {
         currentLength -= singleSolution.getLast().getLength();
         singleSolution.removeLast();
         pointCount -= node.getTowns().size();
-    }
-
-    class LongRunningTask implements Runnable {
-
-        private QuadtreePhase quadtreePhaseInstance;
-
-        public LongRunningTask(QuadtreePhase quadtreePhaseInstance) {
-            this.quadtreePhaseInstance = quadtreePhaseInstance;
-        }
-
-        @Override
-        public void run() {
-            for (QuadNode node : quadtreePhaseInstance.getQuadNodes()) {
-                calculateNodePaths(node);
-                iteratedNodes.add(node);
-                calculateParentPortals(node.getParent(), node.getPortals());
-                QuadNode currentParent = node.getParent();
-                currentParent.setTraversed(currentParent.getTraversed() + 1);
-                while (!isNull(currentParent) && currentParent.getTraversed() == 4) {
-                    parentPaths(currentParent);
-                    List<Segment> segTest = updateSegments();
-                    currentParent.setSegments(segTest);
-                    for (Segment s : segTest) {
-                        updateSegments(currentParent, s);
-                    }
-                    iteratedNodes.add(currentParent);
-                    if (!isNull(currentParent.getParent())) {
-                        calculateParentPortals(currentParent.getParent(), currentParent.getPortals());
-                        currentParent.getParent().setTraversed(currentParent.getParent().getTraversed() + 1);
-                    }
-                    currentParent = currentParent.getParent();
-                }
-                if(Thread.interrupted()) {
-                    return;
-                }
-            }
-        }
     }
 }

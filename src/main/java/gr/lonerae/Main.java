@@ -28,7 +28,7 @@ public class Main {
     private static Map<String, Integer> initializeTSPInstances() {
         Map<String, Integer> solvedInstances = new HashMap<>();
 //        solvedInstances.put("a280", 2579);
-//        solvedInstances.put("berlin52", 7542);
+        solvedInstances.put("berlin52", 7542);
 //        solvedInstances.put("ch130", 6110);
 //        solvedInstances.put("ch150", 6528);
 //        solvedInstances.put("eil101", 629);
@@ -42,7 +42,7 @@ public class Main {
 //        solvedInstances.put("pr144", 58537);
 //        solvedInstances.put("pr76", 108159);
 //        solvedInstances.put("rat195", 2323);
-        solvedInstances.put("st70", 675);
+//        solvedInstances.put("st70", 675);
 //        solvedInstances.put("test", 0);
 //        solvedInstances.put("test2", 0);
 //        solvedInstances.put("set64", 0);
@@ -63,8 +63,8 @@ public class Main {
 
     private static List<Double> initializeEValues() {
         List<Double> eValues = new ArrayList<>();
-//        eValues.add(1.0);
-        eValues.add(0.5);
+        eValues.add(1.0);
+//        eValues.add(0.5);
 //        eValues.add(0.2);
 //        eValues.add(0.1);
 //        eValues.add(0.01);
@@ -243,7 +243,7 @@ public class Main {
 
     private static Map<Integer, Solution> solveInstanceForChosenEAndPortalsPerSide(double e, List<Point> points, int portals, PreProcessingPhase preProcessingPhaseInstance) {
         LOGGER.log(Level.INFO, "PORTALS: {}", portals);
-        return Arora.calculateWithEndpoints(preProcessingPhaseInstance, portals, points, preProcessingPhaseInstance.getClusters(), true, new Point(0,-7), new Point(0,7), preProcessingPhaseInstance.getTowns().size());//        return Arora.calculateWithEndpoints(preProcessingPhaseInstance, portals, points, preProcessingPhaseInstance.getClusters(), true, new Point(points.get(0)), new Point(points.get(1)), preProcessingPhaseInstance.getTowns().size());
+        return Arora.calculateWithEndpoints(preProcessingPhaseInstance, portals, points, preProcessingPhaseInstance.getClusters(), true, new Point(25,185), new Point(1740,245), preProcessingPhaseInstance.getTowns().size(), false);
     }
 
     private static void plotGraphs(String key, Solution res, Double e, Integer portalsPerNodeSide) {

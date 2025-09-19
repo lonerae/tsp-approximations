@@ -26,6 +26,8 @@ public class KPathFindingPhase {
     private final Map<Point, List<Path>> result = new HashMap<>();
     private Point start;
     private Point end;
+    private Map<Point, ArrayList<Point>> clusters;
+
     // TODO: check with k
     private int townsGoal;
     private ArrayList<Segment> solutionSegments = new ArrayList<>();
@@ -35,6 +37,7 @@ public class KPathFindingPhase {
 
     private boolean sameNodes = false;
     private boolean oppositeNodes = false;
+    private boolean withEarlyFinish = false;
     private boolean earlyFinish = false;
 
     public KPathFindingPhase(double squareSize, int townNumber, int timeLimit) {
@@ -44,12 +47,14 @@ public class KPathFindingPhase {
     }
 
     public Map<Integer, Solution> iterateNodes(QuadtreePhase quadtreePhaseInstance, Map<Point, ArrayList<Point>> clusters,
-                                               boolean verbose, boolean isTour, Point start, Point end, int k
+                                               boolean verbose, Point start, Point end, int k, boolean withEarlyFinish
     ) {
+        this.withEarlyFinish = withEarlyFinish;
         this.start = start;
         this.end = end;
+        this.clusters = clusters;
         boolean success = calculateQuadNodePaths(quadtreePhaseInstance);
-//        LOGGER.log(Level.INFO, "Node paths calculated!");
+        LOGGER.log(Level.INFO, "Node paths calculated!");
         if (success) {
             this.townsGoal = k;
             ArrayList<QuadNode> unvisitedNodes = new ArrayList<>(iteratedNodes.stream().filter(node -> node.getSide() == squareSize / 2).toList());
@@ -67,7 +72,7 @@ public class KPathFindingPhase {
             winners.addAll(solutionMap.values());
             if (!winners.isEmpty()) {
                 Map<Integer, Solution> kTspSolutions = new HashMap<>();
-                transformSolutions(verbose, kTspSolutions);
+                transformSolutions(verbose, kTspSolutions, clusters);
                 return kTspSolutions;
             }
         }
@@ -223,6 +228,7 @@ public class KPathFindingPhase {
                 cutPathOutsideEndpoints(segmentCopy, path);
             }
             else path.addLength(segmentCopy.getLength());
+//            path.addLength(segmentCopy.getLength());
             currentTownNumber += segmentCopy.getTowns().size();
             path.addSegment(segmentCopy);
         }
@@ -230,15 +236,19 @@ public class KPathFindingPhase {
     }
 
     private void updateSolutionMap(int currentTownNumber, Path path) {
-        if (isNull(solutionMap.get(currentTownNumber))) {
-            solutionMap.put(currentTownNumber, path);
-//            LOGGER.log(Level.INFO, "Solution for {} towns found!", currentTownNumber);
+        int test = 0;
+        for (Point town : path.getTowns()) {
+            test += clusters.get(town).size();
         }
-        else if (solutionMap.get(currentTownNumber).getLength() > path.getLength()) {
-            solutionMap.replace(currentTownNumber, path);
-//            LOGGER.log(Level.INFO, "Better solution for {} towns found!", currentTownNumber);
+        if (isNull(solutionMap.get(currentTownNumber + test))) {
+            solutionMap.put(currentTownNumber + test, path);
+            LOGGER.log(Level.INFO, "Solution for {} towns found!", currentTownNumber + test);
         }
-        if (currentTownNumber == townsGoal) {
+        else if (solutionMap.get(currentTownNumber + test).getLength() > path.getLength()) {
+            solutionMap.replace(currentTownNumber + test, path);
+            LOGGER.log(Level.INFO, "Better solution for {} towns found!", currentTownNumber + test);
+        }
+        if (this.withEarlyFinish && currentTownNumber + test == townsGoal) {
             earlyFinish = true;
         }
     }
@@ -289,14 +299,14 @@ public class KPathFindingPhase {
         path.addLength(length);
     }
 
-    private void transformSolutions(boolean verbose, Map<Integer, Solution> kTspSolutions) {
+    private void transformSolutions(boolean verbose, Map<Integer, Solution> kTspSolutions, Map<Point, ArrayList<Point>> clusters) {
         for (Path solution : winners) {
-            transformSolution(verbose, kTspSolutions, solution);
+            transformSolution(verbose, kTspSolutions, solution, clusters);
             onLinePoints.clear();
         }
     }
 
-    private void transformSolution(boolean verbose, Map<Integer, Solution> kTspSolutions, Path solution) {
+    private void transformSolution(boolean verbose, Map<Integer, Solution> kTspSolutions, Path solution, Map<Point, ArrayList<Point>> clusters) {
         solutionSegments = new ArrayList<>();
         ArrayList<Point> sequence = new ArrayList<>();
         Point lead = null;
@@ -309,8 +319,9 @@ public class KPathFindingPhase {
                     lead = addTownToSequence(town, currentSegment, lead, sequence);
                 }
             }
-            //        explodeClusters(clusters); ???
         }
+        explodeClusters(sequence, clusters);
+        Untangler.untangle(sequence);
         assignLengthToSolution(verbose, kTspSolutions, sequence);
     }
 
