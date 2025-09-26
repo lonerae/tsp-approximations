@@ -91,10 +91,15 @@ public class SegmentUtils {
                 point.getY() >= Math.min(segment.getStart().getY(), segment.getEnd().getY()) && point.getY() <= Math.max(segment.getStart().getY(), segment.getEnd().getY());
     }
 
-    public static Point contains(Segment segment, Point point) {
+    public static Point hasEdge(Segment segment, Point point) {
         if (segment.getStart().equals(point)) return segment.getEnd();
         else if (segment.getEnd().equals(point)) return segment.getStart();
         else return null;
+    }
+
+    public static boolean hasEdges(Segment segment, Point start, Point end) {
+        return (segment.getStart().equals(start) && segment.getEnd().equals(end)) ||
+                (segment.getStart().equals(end) && segment.getEnd().equals(start));
     }
 
     public static boolean commonEdges(Segment first, Segment second) {

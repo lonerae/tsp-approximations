@@ -34,6 +34,7 @@ public class QuadNode {
     public String toString() {
         return "QuadNode{" +
                 "lowerLeftCorner=" + lowerLeftCorner +
+                ", side=" + side +
                 '}';
     }
 }

@@ -43,7 +43,7 @@ public class Path {
     @Override
     public String toString() {
         StringBuilder stringBuilder = new StringBuilder();
-        Point stitch = SegmentUtils.contains(segments.getFirst(), entrance);
+        Point stitch = SegmentUtils.hasEdge(segments.getFirst(), entrance);
         if (isNull(stitch)) return "";
         stringBuilder.append(entrance).append(" -> ").append(stitch);
         if (segments.size() > 1) {
@@ -52,7 +52,7 @@ public class Path {
                 for (Point town : segments.get(i).getTowns()) {
                     stringBuilder.append(town).append(" -> ");
                 }
-                stitch = SegmentUtils.contains(segments.get(i), stitch);
+                stitch = SegmentUtils.hasEdge(segments.get(i), stitch);
                 stringBuilder.append(stitch);
             }
         }

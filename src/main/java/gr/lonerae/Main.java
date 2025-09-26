@@ -13,8 +13,6 @@ import org.apache.logging.log4j.Logger;
 import javax.swing.*;
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
-
 import static java.util.Objects.isNull;
 
 public class Main {
@@ -43,8 +41,8 @@ public class Main {
 //        solvedInstances.put("pr76", 108159);
 //        solvedInstances.put("rat195", 2323);
 //        solvedInstances.put("st70", 675);
-        solvedInstances.put("test", 0);
-//        solvedInstances.put("test2", 0);
+//        solvedInstances.put("test", 0);
+        solvedInstances.put("test2", 0);
 //        solvedInstances.put("set64", 0);
         return solvedInstances;
     }
@@ -122,7 +120,7 @@ public class Main {
         }
     }
 
-    private static double solveInstance(Map.Entry<String, Integer> entry, List<Double> eValues, List<Integer> portalsPerNodeSide, Map<String, Integer> solvedInstances, double avgPerfomance) throws InterruptedException {
+    private static double solveInstance(Map.Entry<String, Integer> entry, List<Double> eValues, List<Integer> portalsPerNodeSide, Map<String, Integer> solvedInstances, double avgPerfomance) {
         LOGGER.log(Level.INFO, "********************");
         LOGGER.log(Level.INFO, "INSTANCE: {}", entry.getKey());
 
@@ -156,10 +154,10 @@ public class Main {
             }
             if (!isNull(res) && !res.isEmpty()) {
                 FileUtils.saveKTSPSolution(entry.getKey(), res);
-                for (Solution kTspSolution : res.values()) {
-                    plotGraphs(entry.getKey(), kTspSolution, kTspSolution.getE(), kTspSolution.getPortalsPerSide());
-                    TimeUnit.SECONDS.sleep(1);
-                }
+//                for (Solution kTspSolution : res.values()) {
+//                    plotGraphs(entry.getKey(), kTspSolution, kTspSolution.getE(), kTspSolution.getPortalsPerSide());
+//                    TimeUnit.SECONDS.sleep(1);
+//                }
             }
             return avgPerfomance;
         } else {
@@ -249,7 +247,7 @@ public class Main {
         if (isNull(start) || isNull(end)) {
             throw new RuntimeException();
         }
-        return Arora.calculateWithEndpoints(preProcessingPhaseInstance, portals, points, preProcessingPhaseInstance.getClusters(), true, new Point(start), new Point(end), preProcessingPhaseInstance.getTowns().size(), false);
+        return Arora.calculateWithEndpoints(preProcessingPhaseInstance, portals, points, preProcessingPhaseInstance.getClusters(), false, new Point(start), new Point(end), preProcessingPhaseInstance.getTowns().size(), false);
     }
 
     private static void plotGraphs(String key, Solution res, Double e, Integer portalsPerNodeSide) {

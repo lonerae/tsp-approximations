@@ -26,9 +26,9 @@ public class KPathFindingPhase {
     private final Map<Point, List<Path>> result = new HashMap<>();
     private Point start;
     private Point end;
+    private int k;
     private Map<Point, ArrayList<Point>> clusters;
 
-    // TODO: check with k
     private int townsGoal;
     private ArrayList<Segment> solutionSegments = new ArrayList<>();
     private final ArrayList<Point> onLinePoints = new ArrayList<>();
@@ -52,11 +52,12 @@ public class KPathFindingPhase {
         this.withEarlyFinish = withEarlyFinish;
         this.start = start;
         this.end = end;
+        this.k = k;
         this.clusters = clusters;
         boolean success = calculateQuadNodePaths(quadtreePhaseInstance);
         LOGGER.log(Level.INFO, "Node paths calculated!");
         if (success) {
-            this.townsGoal = k;
+            this.townsGoal = this.k;
             ArrayList<QuadNode> unvisitedNodes = new ArrayList<>(iteratedNodes.stream().filter(node -> node.getSide() == squareSize / 2).toList());
             QuadNode originNode = unvisitedNodes.stream().filter(node -> node.getTowns().contains(this.start)).findFirst().orElseThrow();
             QuadNode finishNode = unvisitedNodes.stream().filter(node -> node.getTowns().contains(this.end)).findFirst().orElseThrow();
@@ -101,16 +102,23 @@ public class KPathFindingPhase {
     }
 
     private void solveKTSP(QuadNode originNode, ArrayList<QuadNode> unvisitedNodes) {
-        for (Segment segment : originNode.getSegments().stream().filter(segment -> segment.getTowns().contains(this.start)).toList()) {
-            Segment segmentCopy = new Segment(segment);
-            if (townsGoal - segmentCopy.getTownNumber() < 1) continue;
+        List<Segment> startingSegmentsCandidates = originNode.getSegments().stream().filter(segment -> segment.getTowns().contains(this.start)).toList();
+        int i = 0;
+        while (i < startingSegmentsCandidates.size() && !earlyFinish) {
+            Segment segmentCopy = new Segment(startingSegmentsCandidates.get(i));
+            if (townsGoal - segmentCopy.getTownNumber() < 1) {
+                i++;
+                continue;
+            }
             this.townsGoal -= segmentCopy.getTownNumber();
             tempSolution.add(segmentCopy);
             if (segmentCopy.getTowns().contains(this.end)) constructPathAndUpdateSolutionMap();
             else branchOutFromStart(segmentCopy, unvisitedNodes);
-            if (earlyFinish) break;
-            tempSolution.removeLast();
-            this.townsGoal += segmentCopy.getTownNumber();
+            if (!earlyFinish) {
+                tempSolution.removeLast();
+                this.townsGoal += segmentCopy.getTownNumber();
+            }
+            i++;
         }
     }
 
@@ -128,20 +136,30 @@ public class KPathFindingPhase {
             ArrayList<QuadNode> copyOfUnvisitedNodes = new ArrayList<>(unvisitedNodes);
             Point stitch = left ? segment.getStart() : segment.getEnd();
             if (node.getPortals().contains(stitch)) {
-                copyOfUnvisitedNodes.remove(node);
-                List<Segment> candidates = node.getSegments().stream().filter(s -> s.getStart().equals(stitch) || s.getEnd().equals(stitch)).toList();
-                for (Segment candidate : candidates) {
-                    Segment segmentCopy = new Segment(candidate);
-                    if (townsGoal - candidate.getTownNumber() < 1) continue;
-                    townsGoal -= segmentCopy.getTownNumber();
-                    tempSolution.add(segmentCopy);
-                    Point temp = segmentCopy.getStart().equals(stitch) ? segmentCopy.getEnd() : segmentCopy.getStart();
-                    traverseNodes(temp, copyOfUnvisitedNodes);
-                    if (earlyFinish) break;
-                    Segment removed = tempSolution.removeLast();
-                    townsGoal += removed.getTownNumber();
-                }
+                escapeFromOrigin(node, copyOfUnvisitedNodes, stitch);
             }
+        }
+    }
+
+    private void escapeFromOrigin(QuadNode node, ArrayList<QuadNode> copyOfUnvisitedNodes, Point stitch) {
+        copyOfUnvisitedNodes.remove(node);
+        List<Segment> candidates = node.getSegments().stream().filter(s -> s.getStart().equals(stitch) || s.getEnd().equals(stitch)).toList();
+        int i = 0;
+        while (i < candidates.size() && !earlyFinish) {
+            Segment segmentCopy = new Segment(candidates.get(i));
+            if (townsGoal - segmentCopy.getTownNumber() < 1) {
+                i++;
+                continue;
+            }
+            townsGoal -= segmentCopy.getTownNumber();
+            tempSolution.add(segmentCopy);
+            Point temp = segmentCopy.getStart().equals(stitch) ? segmentCopy.getEnd() : segmentCopy.getStart();
+            traverseNodes(temp, copyOfUnvisitedNodes);
+            if (!earlyFinish) {
+                Segment removed = tempSolution.removeLast();
+                townsGoal += removed.getTownNumber();
+            }
+            i++;
         }
     }
 
@@ -179,35 +197,44 @@ public class KPathFindingPhase {
     }
 
     private void completePath(Point stitch, QuadNode node, ArrayList<QuadNode> unvisitedNodes) {
-        for (Segment nextSegment : node.getSegments().stream().filter(s -> (s.getStart().equals(stitch) || s.getEnd().equals(stitch)) && s.getTowns().contains(this.end)).toList()) {
+        List<Segment> finishingCandidates = node.getSegments().stream().filter(s -> !isNull(SegmentUtils.hasEdge(s, stitch)) && s.getTowns().contains(this.end)).toList();
+        for (Segment nextSegment : finishingCandidates) {
             if (earlyFinish) break;
             Segment segmentCopy = new Segment(nextSegment);
             tempSolution.add(segmentCopy);
             townsGoal -= segmentCopy.getTownNumber();
             constructPathAndUpdateSolutionMap();
             if (oppositeNodes && !unvisitedNodes.isEmpty()) {
-                QuadNode remainingNode = unvisitedNodes.getFirst();
-                for (int i = 1; i < remainingNode.getTownNumber() + 1; i++) {
-                    int currentTownNumber = i;
-                    Optional<Segment> bestPick = remainingNode.getSegments().stream().filter(segment -> segment.getTowns().size() == currentTownNumber).sorted(Comparator.comparingDouble(Segment::getLength)).findFirst();
-                    if (bestPick.isPresent()) {
-                        // Suffix
-                        tempSolution.add(2, bestPick.get());
-                        townsGoal -= bestPick.get().getTownNumber();
-                        constructPathAndUpdateSolutionMap();
-                        if (earlyFinish) break;
-                        // Prefix
-                        Collections.swap(tempSolution, 2, 1);
-                        constructPathAndUpdateSolutionMap();
-                        if (earlyFinish) break;
-                        // Undo
-                        tempSolution.remove(bestPick.get());
-                        townsGoal += bestPick.get().getTownNumber();
-                    }
-                }
+                manipulateSolution(unvisitedNodes);
             }
             Segment removed = tempSolution.removeLast();
             townsGoal += removed.getTownNumber();
+        }
+    }
+
+    private void manipulateSolution(ArrayList<QuadNode> unvisitedNodes) {
+        QuadNode remainingNode = unvisitedNodes.getFirst();
+        int i = 1;
+        while (i < remainingNode.getTownNumber() + 1 && !earlyFinish) {
+            int currentTownNumber = i;
+            Optional<Segment> bestPick = remainingNode.getSegments().stream().filter(segment -> segment.getTownNumber() == currentTownNumber).min(Comparator.comparingDouble(Segment::getLength));
+            if (bestPick.isPresent()) {
+                // Suffix
+                tempSolution.add(2, bestPick.get());
+                townsGoal -= bestPick.get().getTownNumber();
+                constructPathAndUpdateSolutionMap();
+                if (!earlyFinish) {
+                    // Prefix
+                    Collections.swap(tempSolution, 2, 1);
+                    constructPathAndUpdateSolutionMap();
+                }
+                if (!earlyFinish) {
+                    // Undo
+                    tempSolution.remove(bestPick.get());
+                    townsGoal += bestPick.get().getTownNumber();
+                }
+            }
+            i++;
         }
     }
 
@@ -219,7 +246,7 @@ public class KPathFindingPhase {
         for (Segment segment : tempSolution) {
             Segment segmentCopy = new Segment(segment);
             naivePath.addLength(segmentCopy.getLength());
-            currentTownNumber += segmentCopy.getTowns().size();
+            currentTownNumber += segmentCopy.getTownNumber();
             naivePath.addSegment(segmentCopy);
             if (segment.getTowns().contains(start) || segment.getTowns().contains(end)) {
                fineTune = true;
@@ -233,19 +260,16 @@ public class KPathFindingPhase {
             for (Segment segment : tempSolution) {
                 Segment segmentCopy = new Segment(segment);
                 if (segment.getTowns().contains(start) && !segment.getTowns().contains(end)) {
-//                    tempSolution.set(tempSolution.indexOf(segment), segmentCopy);
                     cutPathBeforeStart(segmentCopy, fineTunedPath);
                 }
                 else if (segment.getTowns().contains(end) && !segment.getTowns().contains(start)) {
-//                    tempSolution.set(tempSolution.indexOf(segment), segmentCopy);
                     cutPathAfterEnd(segmentCopy, fineTunedPath);
                 }
                 else if (segment.getTowns().contains(start) && segment.getTowns().contains(end)) {
-//                    tempSolution.set(tempSolution.indexOf(segment), segmentCopy);
                     cutPathOutsideEndpoints(segmentCopy, fineTunedPath);
                 }
                 fineTunedPath.addLength(segmentCopy.getLength());
-                currentTownNumber += segmentCopy.getTowns().size();
+                currentTownNumber += segmentCopy.getTownNumber();
                 fineTunedPath.addSegment(segmentCopy);
             }
             updateSolutionMap(currentTownNumber, fineTunedPath);
@@ -260,10 +284,13 @@ public class KPathFindingPhase {
         if (isNull(solutionMap.get(currentTownNumber + totalClusterSize))) {
             solutionMap.put(currentTownNumber + totalClusterSize, path);
             LOGGER.log(Level.INFO, "Solution for {} towns found!", currentTownNumber + totalClusterSize);
+            LOGGER.log(Level.INFO, "Overall Progress: {}/{}", solutionMap.size(), k - 1);
+            if (solutionMap.size() == k - 1) {
+                LOGGER.log(Level.INFO, "Searching for possibly better alternatives.");
+            }
         }
         else if (solutionMap.get(currentTownNumber + totalClusterSize).getLength() > path.getLength()) {
             solutionMap.replace(currentTownNumber + totalClusterSize, path);
-            LOGGER.log(Level.INFO, "Better solution for {} towns found!", currentTownNumber + totalClusterSize);
         }
         if (this.withEarlyFinish && currentTownNumber + totalClusterSize == townsGoal) {
             earlyFinish = true;

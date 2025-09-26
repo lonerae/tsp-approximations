@@ -11,7 +11,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.*;
-import java.util.concurrent.*;
 
 import static java.util.Objects.isNull;
 import static java.util.function.Predicate.not;
@@ -42,10 +41,7 @@ public class PathFindingPhase {
 
     private int visitedTowns = 0;
 
-    private Point lead = null;
-    private Segment currentSegment = null;
     private final ArrayList<Segment> solutionSegments = new ArrayList<>();
-    private final ArrayList<Point> onLinePoints = new ArrayList<>();
 
     private double currentLength = 0;
     private double bestLength = 0;
@@ -128,7 +124,7 @@ public class PathFindingPhase {
     }
 
     private void chainSegment(Point entrance, Point stitch, Segment newSegment, ArrayList<QuadNode> updatedUnvisited) {
-        Point newStitch = SegmentUtils.contains(newSegment, stitch);
+        Point newStitch = SegmentUtils.hasEdge(newSegment, stitch);
         if (!isNull(newStitch)) {
             temp.add(newSegment);
             double x = constructTSP(entrance, newStitch, updatedUnvisited);

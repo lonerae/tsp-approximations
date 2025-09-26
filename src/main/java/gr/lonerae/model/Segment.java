@@ -1,5 +1,6 @@
 package gr.lonerae.model;
 
+import gr.lonerae.utils.CommonUtils;
 import lombok.Data;
 
 import java.util.ArrayList;
@@ -13,7 +14,6 @@ public class Segment {
 
     private List<Path> inner = new ArrayList<>();
     private List<Point> towns =  new ArrayList<>();
-    private int townNumber = 0;
 
     public Segment(Point start, Point end, boolean ordered) {
         if (ordered) {
@@ -30,11 +30,11 @@ public class Segment {
         this.start = segment.getStart();
         this.end = segment.getEnd();
         this.length = segment.getLength();
-        this.towns = new ArrayList<>();
-        for (Point town : segment.getTowns()) {
-            this.towns.add(new Point(town));
-        }
+        this.towns = CommonUtils.deepCopy(segment.getTowns());
+        this.inner = new ArrayList<>();
     }
+
+    public int getTownNumber() {return towns.size();}
 
     @Override
     public String toString() {

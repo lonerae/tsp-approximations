@@ -1,113 +1,169 @@
 package gr.lonerae.phases.arora.helper;
 
+import gr.lonerae.graphics.ProgressBar;
 import gr.lonerae.model.Path;
 import gr.lonerae.model.Point;
 import gr.lonerae.model.QuadNode;
 import gr.lonerae.model.Segment;
 import gr.lonerae.phases.arora.QuadtreePhase;
+import gr.lonerae.utils.PathUtils;
+import gr.lonerae.utils.PointUtils;
 import gr.lonerae.utils.QuadTreeUtils;
 import gr.lonerae.utils.SegmentUtils;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.*;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Stream;
 
 import static java.util.Objects.isNull;
 
 public class PathFinder implements Runnable {
     private final QuadtreePhase quadtreePhaseInstance;
     private final List<QuadNode> iteratedNodes;
-    private final Map<Point, List<Path>> result;
+
+    private final Map<Point, List<Path>> allSolutions;
+    private final List<Segment> currentSolution = new ArrayList<>();
 
     private QuadNode parent;
-
-    private final List<Segment> singleSolution = new ArrayList<>();
-
-    private Point start;
-    private Point end;
+    private final Point startingTown;
+    private final Point finishingTown;
     private Point entrance;
     private Point exit;
-    private double currentLength = 0;
-    private double bestLength = 0;
 
-    public PathFinder(QuadtreePhase quadtreePhaseInstance, List<QuadNode> iteratedNodes, Map<Point, List<Path>> result, Point start, Point end) {
+    Map<SegmentKey, Double> bestLengthHashMap = new HashMap<>();
+
+    private static final Logger LOGGER = LogManager.getLogger();
+    private static final String PROGRESS_MESSAGE = "CURRENT PARENT: {}";
+
+    @Data
+    @AllArgsConstructor
+    private static class SegmentKey {
+        private Segment segment;
+        private int towns;
+    }
+
+    public PathFinder(QuadtreePhase quadtreePhaseInstance, List<QuadNode> iteratedNodes, Map<Point, List<Path>> allSolutions, Point startingTown, Point finishingTown) {
         this.quadtreePhaseInstance = quadtreePhaseInstance;
         this.iteratedNodes = iteratedNodes;
-        this.result = result;
-        this.start = start;
-        this.end = end;
+        this.allSolutions = allSolutions;
+        this.startingTown = startingTown;
+        this.finishingTown = finishingTown;
     }
 
     @Override
     public void run() {
         for (QuadNode node : quadtreePhaseInstance.getQuadNodes()) {
-            calculateNodePaths(node);
+            calculateFinalisedNodeSegments(node);
             iteratedNodes.add(node);
             calculateParentPortals(node.getParent(), node.getPortals());
             QuadNode currentParent = node.getParent();
             currentParent.setTraversed(currentParent.getTraversed() + 1);
             while (!isNull(currentParent) && currentParent.getTraversed() == 4) {
-                System.out.println(currentParent + " " + currentParent.getSide());
-                iteratedNodes.add(currentParent);
-                parentPaths(currentParent);
-                List<Segment> segTest = updateSegments(currentParent);
-                currentParent.setSegments(segTest);
-                for (Segment s : segTest) {
-                    updateSegments(currentParent, s);
-                }
-                currentParent.setSegments(currentParent.getSegments().stream().distinct().toList());
-                for (Point portalEntrance : currentParent.getPortals()) {
-                    for (Point portalExit : currentParent.getPortals()) {
-                        if (portalEntrance.equals(portalExit)) continue;
-                        for (int i = 2; i <= currentParent.getTowns().size(); i++) {
-                            int finalI = i;
-                            List<Segment> segmentsToLeave = currentParent.getSegments().stream().filter(s ->
-                                    ((s.getStart().equals(portalEntrance) && s.getEnd().equals(portalExit)) || (s.getStart().equals(portalExit) && s.getEnd().equals(start))) &&
-                                    s.getTowns().size() == finalI).toList();
-                            ArrayList<Segment> temp = new ArrayList<>(currentParent.getSegments());
-                            temp.removeAll(segmentsToLeave);
-                            currentParent.setSegments(temp);
-                            Segment survivor = segmentsToLeave.stream().min(Comparator.comparingDouble(Segment::getLength)).orElse(null);
-                            if (!isNull(survivor)) currentParent.getSegments().add(survivor);
-                        }
-
-                    }
-                }
-                if (!isNull(currentParent.getParent())) {
-                    calculateParentPortals(currentParent.getParent(), currentParent.getPortals());
-                    currentParent.getParent().setTraversed(currentParent.getParent().getTraversed() + 1);
-                }
-                if (currentParent.getSide() == 404) {
-                    int x = 1;
-                }
-                currentParent = currentParent.getParent();
+                currentParent = calculateParentNodeSegments(currentParent);
             }
             if (Thread.interrupted()) {
                 return;
             }
         }
-        int x = 1;
+    }
+
+    private void calculateFinalisedNodeSegments(QuadNode node) {
+        for (int i = 0; i < node.getPortals().size() - 1; i++) {
+            for (int j = i + 1; j < node.getPortals().size(); j++) {
+                if (node.getTowns().isEmpty() || !isNull(startingTown)) {
+                    addFinalisedSegment(node, i, j, false);
+                }
+                if (node.getTownNumber() == 1) {
+                    addFinalisedSegment(node, i, j, true);
+                }
+            }
+        }
+    }
+
+    private static void addFinalisedSegment(QuadNode node, int i, int j, boolean visitsTowns) {
+        Segment segment = new Segment(node.getPortals().get(i), node.getPortals().get(j), true);
+        if (visitsTowns) {
+            segment.setLength(SegmentUtils.getPathLengthThroughPoint(segment, node.getTowns().getFirst()));
+            segment.getTowns().add(node.getTowns().getFirst());
+        } else {
+            segment.setLength(SegmentUtils.getPathLength(segment));
+        }
+        node.getSegments().add(segment);
+        updateSegments(node, segment);
+    }
+
+    private QuadNode calculateParentNodeSegments(QuadNode currentParent) {
+        if (currentParent.getSide() != quadtreePhaseInstance.getRoot().getSide()) {
+            LOGGER.log(Level.INFO, PROGRESS_MESSAGE, currentParent);
+        }
+        iteratedNodes.add(currentParent);
+        parentPaths(currentParent);
+        List<Segment> segTest = updateSegments(currentParent);
+        currentParent.setSegments(segTest);
+        for (Segment s : segTest) {
+            updateSegments(currentParent, s);
+        }
+        currentParent.setSegments(currentParent.getSegments().stream().distinct().toList());
+        removeSuboptimalSegments(currentParent);
+        if (!isNull(currentParent.getParent())) {
+            calculateParentPortals(currentParent.getParent(), currentParent.getPortals());
+            currentParent.getParent().setTraversed(currentParent.getParent().getTraversed() + 1);
+        }
+        currentParent = currentParent.getParent();
+        return currentParent;
+    }
+
+    private void parentPaths(QuadNode parent) {
+        this.parent = parent;
+        List<Point> parentPortals = parent.getPortals();
+        ArrayList<QuadNode> children = new ArrayList<>(parent.getChildren().values());
+        int loops = (parentPortals.size() * (parentPortals.size() - 1) / 2);
+        int currentLoop = 0;
+        for (int i = 0; i < parentPortals.size() - 1; i++) {
+            entrance = parentPortals.get(i);
+            for (int j = i + 1; j < parentPortals.size(); j++) {
+                exit = parentPortals.get(j);
+                searchChildren(entrance, children);
+                ProgressBar.showProgress(currentLoop++, loops);
+            }
+        }
     }
 
     private static void updateSegments(QuadNode node, Segment segment) {
-        List<Segment> segmentsByEntrance = node.getSegmentsByEntrance().get(segment.getStart());
+        updateSegments(node, segment, segment.getStart());
+        updateSegments(node, segment, segment.getEnd());
+    }
+
+    private static void updateSegments(QuadNode node, Segment segment, Point entrance) {
+        List<Segment> segmentsByEntrance = node.getSegmentsByEntrance().get(entrance);
         if (!isNull(segmentsByEntrance)) segmentsByEntrance.add(segment);
         else {
-            ArrayList<Segment> first = new ArrayList<>();
-            first.add(segment);
-            node.getSegmentsByEntrance().put(segment.getStart(), first);
+            node.getSegmentsByEntrance().put(entrance, new ArrayList<>());
+            node.getSegmentsByEntrance().get(entrance).add(segment);
         }
-        segmentsByEntrance = node.getSegmentsByEntrance().get(segment.getEnd());
-        if (!isNull(segmentsByEntrance)) segmentsByEntrance.add(segment);
-        else {
-            ArrayList<Segment> first = new ArrayList<>();
-            first.add(segment);
-            node.getSegmentsByEntrance().put(segment.getEnd(), first);
+    }
+
+    private void removeSuboptimalSegments(QuadNode currentParent) {
+        for (Point portalEntrance : currentParent.getPortals()) {
+            for (Point portalExit : currentParent.getPortals()) {
+                if (portalEntrance.equals(portalExit)) continue;
+                for (int i = 2; i <= currentParent.getTownNumber(); i++) {
+                    int finalI = i;
+                    List<Segment> segmentsToRemove = currentParent.getSegments().stream().filter(s ->
+                            SegmentUtils.hasEdges(s, portalEntrance, portalExit) &&
+                            !s.getTowns().contains(startingTown) && !s.getTowns().contains(finishingTown) &&
+                            s.getTownNumber() == finalI).toList();
+                    ArrayList<Segment> mutableSegmentList = new ArrayList<>(currentParent.getSegments());
+                    mutableSegmentList.removeAll(segmentsToRemove);
+                    currentParent.setSegments(mutableSegmentList);
+                    Segment optimalSegment = segmentsToRemove.stream().min(Comparator.comparingDouble(Segment::getLength)).orElse(null);
+                    if (!isNull(optimalSegment)) currentParent.getSegments().add(optimalSegment);
+                }
+
+            }
         }
     }
 
@@ -115,41 +171,6 @@ public class PathFinder implements Runnable {
         for (Point portal : portals) {
             if (QuadTreeUtils.pointIsOnNodeSides(parent, portal)) {
                 parent.getPortals().add(portal);
-            }
-        }
-    }
-
-    private void calculateNodePaths(QuadNode node) {
-        for (int i = 0; i < node.getPortals().size() - 1; i++) {
-            for (int j = i + 1; j < node.getPortals().size(); j++) {
-                if (node.getTowns().size() == 1) {
-                    Segment segmentWithTown = new Segment(node.getPortals().get(i), node.getPortals().get(j), true);
-                    segmentWithTown.setLength(SegmentUtils.getPathLengthThroughPoint(segmentWithTown, node.getTowns().getFirst()));
-                    segmentWithTown.getTowns().add(node.getTowns().getFirst());
-                    node.getSegments().add(segmentWithTown);
-                    updateSegments(node, segmentWithTown);
-                }
-                if (node.getTowns().isEmpty() || !isNull(start)) {
-                    Segment segment = new Segment(node.getPortals().get(i), node.getPortals().get(j), true);
-                    segment.setLength(SegmentUtils.getPathLength(segment));
-                    node.getSegments().add(segment);
-                    updateSegments(node, segment);
-                }
-            }
-        }
-    }
-
-    private void parentPaths(QuadNode parent) {
-        this.parent = parent;
-        List<Point> parentPortals = parent.getPortals();
-        ArrayList<QuadNode> children = new ArrayList<>(parent.getChildren().values());
-        for (int i = 0; i < parentPortals.size() - 1; i++) {
-            System.out.println("I: " + i + "/" + parentPortals.size());
-            entrance = parentPortals.get(i);
-            for (int j = i + 1; j < parentPortals.size(); j++) {
-                System.out.println("J: " + j + "/" + parentPortals.size());
-                exit = parentPortals.get(j);
-                searchChildren(entrance, children);
             }
         }
     }
@@ -167,10 +188,13 @@ public class PathFinder implements Runnable {
         updatedUnvisited.remove(node);
         if (!isNull(node.getSegmentsByEntrance().get(exit))) {
             for (Segment segment : node.getSegment(exit, stitch)) {
-                if (node.getTowns().contains(start) && !segment.getTowns().contains(start)) continue;
-                if (node.getTowns().contains(end) && !segment.getTowns().contains(end)) continue;
-                singleSolution.add(segment);
-                currentLength += segment.getLength();
+                if (
+                        (node.getTowns().contains(startingTown) && !segment.getTowns().contains(startingTown)) ||
+                        (node.getTowns().contains(finishingTown) && !segment.getTowns().contains(finishingTown))
+                ) {
+                    continue;
+                }
+                currentSolution.add(segment);
                 savePath();
             }
         } else continueToNeighborNode(stitch, node, updatedUnvisited);
@@ -178,17 +202,18 @@ public class PathFinder implements Runnable {
 
     private void continueToNeighborNode(Point stitch, QuadNode node, ArrayList<QuadNode> updatedUnvisited) {
         for (Segment segment : node.getSegmentsByEntrance().get(stitch)) {
-            if (node.getTowns().contains(start) && !segment.getTowns().contains(start)) continue;
-            if (node.getTowns().contains(end) && !segment.getTowns().contains(end)) continue;
-            // Segment contains previous vertex
-            singleSolution.add(segment);
-            currentLength += segment.getLength();
+            if (
+                    (node.getTowns().contains(startingTown) && !segment.getTowns().contains(startingTown)) ||
+                    (node.getTowns().contains(finishingTown) && !segment.getTowns().contains(finishingTown))
+            ) {
+                continue;
+            }
+            currentSolution.add(segment);
             Point nextStitch = segment.getStart().equals(stitch) ? segment.getEnd() : segment.getStart();
             if (segment.getStart().equals(exit) || segment.getEnd().equals(exit)) {
                 savePath();
             } else if (
                     updatedUnvisited.isEmpty() ||
-                    (currentLength > bestLength && bestLength != 0) ||
                     this.parent.getPortals().contains(nextStitch)
             ) {
                 backtrack();
@@ -200,150 +225,171 @@ public class PathFinder implements Runnable {
     }
 
     private void backtrack() {
-        if (!singleSolution.isEmpty()) {
-            Segment removed = singleSolution.removeLast();
-            currentLength -= removed.getLength();
+        if (!currentSolution.isEmpty()) {
+            currentSolution.removeLast();
         }
     }
 
     private void savePath() {
-        Path solution = new Path();
-        solution.setEntrance(entrance);
-        solution.setExit(exit);
-        for (Segment segment : singleSolution) {
-            solution.addLength(segment.getLength());
-            solution.addSegment(segment);
-            if (!isNull(segment.getTowns())) solution.getTowns().addAll(segment.getTowns());
+        Path formalSolution = new Path();
+        formalSolution.setEntrance(entrance);
+        formalSolution.setExit(exit);
+        constructSolution(formalSolution);
+
+        updateMap(formalSolution, entrance, exit);
+        updateMap(formalSolution, exit, entrance);
+        currentSolution.removeLast();
+    }
+
+    private void constructSolution(Path formalSolution) {
+        for (Segment segment : currentSolution) {
+            formalSolution.addLength(segment.getLength());
+            formalSolution.addSegment(segment);
+            if (!isNull(segment.getTowns())) formalSolution.getTowns().addAll(segment.getTowns());
             if (!segment.getInner().isEmpty()) {
-                solution.getInner().add(segment.getInner().stream().distinct().toList().getFirst());
+                formalSolution.getInner().add(segment.getInner().stream().distinct().toList().getFirst());
             }
         }
+        setSolutionNode(formalSolution);
+    }
+
+    private void setSolutionNode(Path formalSolution) {
         for (QuadNode node : iteratedNodes) {
-            if (node.getPortals().contains(entrance) && node.getPortals().contains(exit)) {
-                if (!solution.getSegments().isEmpty()) {
-                    if (
-                            (solution.getSegments().getFirst().getStart().getX() >= node.getLowerLeftCorner().getX() && solution.getSegments().getFirst().getEnd().getX() >= node.getLowerLeftCorner().getX()) &&
-                                    (solution.getSegments().getFirst().getStart().getY() >= node.getLowerLeftCorner().getY() && solution.getSegments().getFirst().getEnd().getY() >= node.getLowerLeftCorner().getY())
-                    ) {
-                        solution.setNode(node);
-                        break;
-                    }
-                } else {
-                    solution.setNode(node);
-                    break;
-                }
+            if (
+                node.getPortals().contains(entrance) &&
+                node.getPortals().contains(exit) &&
+                (
+                        formalSolution.getSegments().isEmpty() ||
+                        (
+                            (PointUtils.compare(formalSolution.getSegments().getFirst().getStart(), node.getLowerLeftCorner()) > 0) &&
+                            (PointUtils.compare(formalSolution.getSegments().getFirst().getEnd(), node.getLowerLeftCorner()) > 0)
+                        )
+                )
+            ) {
+                formalSolution.setNode(node);
+                break;
             }
+
         }
-        updateMap(solution, entrance, exit);
-        updateMap(solution, exit, entrance);
-        Segment removed = singleSolution.removeLast();
-        currentLength -= removed.getLength();
     }
 
     private void updateMap(Path solution, Point point, Point other) {
-        if (isNull(result.get(point))) {
-            result.put(point, new ArrayList<>());
-            result.get(point).add(solution);
+        if (isNull(allSolutions.get(point))) {
+            allSolutions.put(point, new ArrayList<>());
+            allSolutions.get(point).add(solution);
         } else {
-            Optional<Path> champion = result.get(point).stream().filter(
-                    x ->
-                            (x.getExit().equals(other) || x.getEntrance().equals(other)) &&
-                            x.getTownNumber() == solution.getTownNumber() && x.getNode().equals(solution.getNode())
+            Optional<Path> optionalChampion = allSolutions.get(point).stream().filter(path ->
+                            PathUtils.hasEndpoint(path, other) &&
+                            path.getTownNumber() == solution.getTownNumber() &&
+                            path.getNode().equals(solution.getNode())
             ).findFirst();
-            if (champion.isEmpty()) {
-                result.get(point).add(solution);
-            } else if (champion.get().getLength() > solution.getLength()
-                    || (!solution.getTowns().isEmpty() && solution.getTowns().contains(start) && !champion.get().getTowns().contains(start))
-                    || (!solution.getTowns().isEmpty() && solution.getTowns().contains(end) && !champion.get().getTowns().contains(end))) {
-                result.get(point).remove(champion.get());
-                result.get(point).add(solution);
+            if (optionalChampion.isEmpty()) {
+                allSolutions.get(point).add(solution);
+            } else {
+                Path currentBest = optionalChampion.get();
+                boolean onlyNewSolutionContainsStartingTown = !solution.getTowns().isEmpty() && solution.getTowns().contains(startingTown) && !currentBest.getTowns().contains(startingTown);
+                boolean onlyNewSolutionContainsFinishingTown = !solution.getTowns().isEmpty() && solution.getTowns().contains(finishingTown) && !currentBest.getTowns().contains(finishingTown);
+                if (
+                    currentBest.getLength() > solution.getLength() ||
+                    onlyNewSolutionContainsStartingTown || onlyNewSolutionContainsFinishingTown
+                ) {
+                    allSolutions.get(point).remove(currentBest);
+                    allSolutions.get(point).add(solution);
+                }
             }
         }
     }
 
-    @Data
-    @AllArgsConstructor
-    private static class Key {
-        private Segment segment;
-        private int towns;
-    }
-
-    Map<Key, Double> test = new HashMap<>();
     private List<Segment> updateSegments(QuadNode parent) {
         List<Segment> segments = new ArrayList<>();
         for (Point portal : parent.getPortals()) {
-            for (Path path : result.get(portal)) {
+            for (Path path : allSolutions.get(portal)) {
                 Segment newSegment = new Segment(path.getEntrance(), path.getExit(), true);
                 newSegment.setLength(path.getLength());
                 newSegment.getTowns().addAll(path.getTowns());
                 dive(path, newSegment);
                 List<Segment> toAdd = new ArrayList<>();
                 List<Segment> toDelete = new ArrayList<>();
-                boolean gamesOn = checkIfSegmentsShouldCompete(newSegment, toDelete, toAdd);
-                if (!gamesOn) segments.add(newSegment);
+                boolean shouldCompete = checkIfSegmentsShouldCompete(newSegment, toDelete, toAdd);
+                if (!shouldCompete) segments.add(newSegment);
                 else {
                     segments.addAll(toAdd);
                     segments.removeAll(toDelete);
                 }
-                if (newSegment.getTowns().contains(start) && newSegment.getTowns().size() > 2 && !newSegment.getTowns().getFirst().equals(start) && !newSegment.getTowns().getLast().equals(start)) {
-                    Segment siblingSegment = new Segment(newSegment);
-                    siblingSegment.getTowns().remove(start);
-                    siblingSegment.getTowns().addFirst(start);
-                    segments.add(siblingSegment);
-                }
-                if (newSegment.getTowns().contains(end) && newSegment.getTowns().size() > 2 && !newSegment.getTowns().getFirst().equals(end) && !newSegment.getTowns().getLast().equals(end)) {
-                    Segment siblingSegment = new Segment(newSegment);
-                    siblingSegment.getTowns().remove(end);
-                    siblingSegment.getTowns().add(end);
-                    segments.add(siblingSegment);
-                }
+                addSegmentAlternatives(newSegment, segments);
             }
         }
-        result.clear();
+        allSolutions.clear();
         return segments;
     }
 
+    private void addSegmentAlternatives(Segment newSegment, List<Segment> segments) {
+        addSegmentAlternative(newSegment, segments, startingTown, true);
+        addSegmentAlternative(newSegment, segments, finishingTown, false);
+    }
+
+    private void addSegmentAlternative(Segment newSegment, List<Segment> segments, Point endpoint, boolean addingStartingTown) {
+        if (
+                newSegment.getTowns().contains(endpoint) &&
+                newSegment.getTowns().size() > 2 &&
+                !newSegment.getTowns().getFirst().equals(endpoint) &&
+                !newSegment.getTowns().getLast().equals(endpoint)
+        ) {
+            Segment siblingSegment = new Segment(newSegment);
+            siblingSegment.getTowns().remove(endpoint);
+            if (addingStartingTown) siblingSegment.getTowns().addFirst(endpoint);
+            else siblingSegment.getTowns().add(endpoint);
+            segments.add(siblingSegment);
+        }
+    }
+
     private boolean checkIfSegmentsShouldCompete(Segment newSegment, List<Segment> toDelete, List<Segment> toAdd) {
-        Key key1 = new Key(new Segment(newSegment.getStart(), newSegment.getEnd(), false), newSegment.getTowns().size());
-        Key key2 = new Key(new Segment(newSegment.getEnd(), newSegment.getStart(), false), newSegment.getTowns().size());
-        if (isNull(test.get(key1)) && isNull(test.get(key2))) {
-            test.put(key1, newSegment.getLength());
+        SegmentKey orderedKey = new SegmentKey(new Segment(newSegment.getStart(), newSegment.getEnd(), false), newSegment.getTownNumber());
+        SegmentKey reversedKey = new SegmentKey(new Segment(newSegment.getEnd(), newSegment.getStart(), false), newSegment.getTownNumber());
+        if (isNull(bestLengthHashMap.get(orderedKey)) && isNull(bestLengthHashMap.get(reversedKey))) {
+            bestLengthHashMap.put(orderedKey, newSegment.getLength());
             return false;
         } else {
-            Segment champion = !isNull(test.get(key1)) ? key1.getSegment() : key2.getSegment();
-            Segment winner = competeSegments(newSegment, toDelete, toAdd, champion);
-            if (!isNull(test.get(key1))) key1.setSegment(winner);
-            else key2.setSegment(winner);
+            Segment previousBest = !isNull(bestLengthHashMap.get(orderedKey)) ? orderedKey.getSegment() : reversedKey.getSegment();
+            Segment currentBest = competeSegments(newSegment, previousBest, toDelete, toAdd);
+            if (!isNull(bestLengthHashMap.get(orderedKey))) orderedKey.setSegment(currentBest);
+            else reversedKey.setSegment(currentBest);
             return true;
         }
     }
 
-    private Segment competeSegments(Segment newSegment, List<Segment> toDelete, List<Segment> toAdd, Segment segment) {
+    private Segment competeSegments(Segment newSegment, Segment oldSegment, List<Segment> toDelete, List<Segment> toAdd) {
+        boolean newSegmentContainsStartingTown = newSegment.getTowns().contains(startingTown);
+        boolean newSegmentContainsFinishingTown = newSegment.getTowns().contains(finishingTown);
+        boolean oldSegmentContainsStartingTown = oldSegment.getTowns().contains(startingTown);
+        boolean oldSegmentContainsFinishingTown = oldSegment.getTowns().contains(finishingTown);
+        boolean bothContainStartingTown = oldSegmentContainsStartingTown && newSegmentContainsStartingTown;
+        boolean neitherContainStartingTown = !oldSegmentContainsStartingTown && !newSegmentContainsStartingTown;
+        boolean bothContainFinishingTown = oldSegmentContainsFinishingTown && newSegmentContainsFinishingTown;
+        boolean neitherContainFinishingTown = !oldSegmentContainsFinishingTown && !newSegmentContainsFinishingTown;
         if (
-                ((!segment.getTowns().contains(start) && !newSegment.getTowns().contains(start)) || (segment.getTowns().contains(start) && newSegment.getTowns().contains(start))) &&
-                ((!segment.getTowns().contains(end) && !newSegment.getTowns().contains(end)) || (segment.getTowns().contains(end) && newSegment.getTowns().contains(end)))
+                (
+                        (!oldSegmentContainsStartingTown && newSegmentContainsStartingTown) ||
+                        (!oldSegmentContainsFinishingTown && newSegmentContainsFinishingTown)
+                ) ||
+                (
+                        (bothContainStartingTown || neitherContainStartingTown) &&
+                        (bothContainFinishingTown || neitherContainFinishingTown) &&
+                        oldSegment.getLength() > newSegment.getLength()
+                )
         ) {
-            if (segment.getLength() > newSegment.getLength()) {
-                toDelete.add(segment);
+                toDelete.add(oldSegment);
                 toAdd.add(newSegment);
                 return newSegment;
-            }
-        } else if (
-                (!segment.getTowns().contains(start) && newSegment.getTowns().contains(start)) ||
-                (!segment.getTowns().contains(end) && newSegment.getTowns().contains(end))
-        ) {
-            toDelete.add(segment);
-            toAdd.add(newSegment);
-            return newSegment;
         }
-        return segment;
+        return oldSegment;
     }
 
     private void dive(Path path, Segment newSegment) {
         for (Segment s : path.getSegments()) {
-            List<Path> detail = s.getInner();
-            if (!detail.isEmpty()) {
-                for (Path p : detail) {
+            List<Path> innerPaths = s.getInner();
+            if (!innerPaths.isEmpty()) {
+                for (Path p : innerPaths) {
                     dive(p, newSegment);
                 }
             } else {

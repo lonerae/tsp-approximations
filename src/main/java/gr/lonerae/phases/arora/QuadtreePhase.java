@@ -72,13 +72,13 @@ public class QuadtreePhase {
     }
 
     private void finalizeNodePointsOrDivide(QuadNode node) {
-        if (node.getChildren().get(GeneralConstants.UPPER_LEFT).getTowns().size() > 1) divideQuadLeaf(node.getChildren().get(GeneralConstants.UPPER_LEFT));
+        if (node.getChildren().get(GeneralConstants.UPPER_LEFT).getTownNumber() > 1) divideQuadLeaf(node.getChildren().get(GeneralConstants.UPPER_LEFT));
         else updateCornersAndPortals(node.getChildren().get(GeneralConstants.UPPER_LEFT));
-        if (node.getChildren().get(GeneralConstants.UPPER_RIGHT).getTowns().size() > 1) divideQuadLeaf(node.getChildren().get(GeneralConstants.UPPER_RIGHT));
+        if (node.getChildren().get(GeneralConstants.UPPER_RIGHT).getTownNumber() > 1) divideQuadLeaf(node.getChildren().get(GeneralConstants.UPPER_RIGHT));
         else updateCornersAndPortals(node.getChildren().get(GeneralConstants.UPPER_RIGHT));
-        if (node.getChildren().get(GeneralConstants.LOWER_RIGHT).getTowns().size() > 1) divideQuadLeaf(node.getChildren().get(GeneralConstants.LOWER_RIGHT));
+        if (node.getChildren().get(GeneralConstants.LOWER_RIGHT).getTownNumber() > 1) divideQuadLeaf(node.getChildren().get(GeneralConstants.LOWER_RIGHT));
         else updateCornersAndPortals(node.getChildren().get(GeneralConstants.LOWER_RIGHT));
-        if (node.getChildren().get(GeneralConstants.LOWER_LEFT).getTowns().size() > 1) divideQuadLeaf(node.getChildren().get(GeneralConstants.LOWER_LEFT));
+        if (node.getChildren().get(GeneralConstants.LOWER_LEFT).getTownNumber() > 1) divideQuadLeaf(node.getChildren().get(GeneralConstants.LOWER_LEFT));
         else updateCornersAndPortals(node.getChildren().get(GeneralConstants.LOWER_LEFT));
     }
 
