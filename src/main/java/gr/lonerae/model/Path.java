@@ -11,12 +11,10 @@ import static java.util.Objects.isNull;
 public class Path {
     private Point entrance;
     private Point exit;
-
     private QuadNode node;
     private double length = 0.0;
 
     private List<Point> towns = new ArrayList<>();
-
     private List<Segment> segments = new ArrayList<>();
     private List<Path> inner = new ArrayList<>();
 

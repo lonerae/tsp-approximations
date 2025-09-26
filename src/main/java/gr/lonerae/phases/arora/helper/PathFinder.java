@@ -15,6 +15,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import static java.util.Objects.isNull;
 
@@ -50,9 +51,7 @@ public class PathFinder implements Runnable {
             calculateParentPortals(node.getParent(), node.getPortals());
             QuadNode currentParent = node.getParent();
             currentParent.setTraversed(currentParent.getTraversed() + 1);
-            QuadNode finalNode = node;
             while (!isNull(currentParent) && currentParent.getTraversed() == 4) {
-                System.out.println(result.values().stream().flatMap(Collection::stream).toList().size());
                 System.out.println(currentParent + " " + currentParent.getSide());
                 iteratedNodes.add(currentParent);
                 parentPaths(currentParent);
@@ -61,11 +60,30 @@ public class PathFinder implements Runnable {
                 for (Segment s : segTest) {
                     updateSegments(currentParent, s);
                 }
-                QuadNode finalCurrentParent = currentParent;
                 currentParent.setSegments(currentParent.getSegments().stream().distinct().toList());
+                for (Point portalEntrance : currentParent.getPortals()) {
+                    for (Point portalExit : currentParent.getPortals()) {
+                        if (portalEntrance.equals(portalExit)) continue;
+                        for (int i = 2; i <= currentParent.getTowns().size(); i++) {
+                            int finalI = i;
+                            List<Segment> segmentsToLeave = currentParent.getSegments().stream().filter(s ->
+                                    ((s.getStart().equals(portalEntrance) && s.getEnd().equals(portalExit)) || (s.getStart().equals(portalExit) && s.getEnd().equals(start))) &&
+                                    s.getTowns().size() == finalI).toList();
+                            ArrayList<Segment> temp = new ArrayList<>(currentParent.getSegments());
+                            temp.removeAll(segmentsToLeave);
+                            currentParent.setSegments(temp);
+                            Segment survivor = segmentsToLeave.stream().min(Comparator.comparingDouble(Segment::getLength)).orElse(null);
+                            if (!isNull(survivor)) currentParent.getSegments().add(survivor);
+                        }
+
+                    }
+                }
                 if (!isNull(currentParent.getParent())) {
                     calculateParentPortals(currentParent.getParent(), currentParent.getPortals());
                     currentParent.getParent().setTraversed(currentParent.getParent().getTraversed() + 1);
+                }
+                if (currentParent.getSide() == 404) {
+                    int x = 1;
                 }
                 currentParent = currentParent.getParent();
             }
@@ -73,6 +91,7 @@ public class PathFinder implements Runnable {
                 return;
             }
         }
+        int x = 1;
     }
 
     private static void updateSegments(QuadNode node, Segment segment) {
@@ -169,8 +188,8 @@ public class PathFinder implements Runnable {
                 savePath();
             } else if (
                     updatedUnvisited.isEmpty() ||
-//                            (currentLength > bestLength && bestLength != 0) ||
-                            this.parent.getPortals().contains(nextStitch)
+                    (currentLength > bestLength && bestLength != 0) ||
+                    this.parent.getPortals().contains(nextStitch)
             ) {
                 backtrack();
             } else {
@@ -280,6 +299,7 @@ public class PathFinder implements Runnable {
                 }
             }
         }
+        result.clear();
         return segments;
     }
 

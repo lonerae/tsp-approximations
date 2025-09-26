@@ -28,6 +28,8 @@ public class QuadNode {
         return currentSegments;
     }
 
+    public int getTownNumber() {return towns.size();}
+
     @Override
     public String toString() {
         return "QuadNode{" +

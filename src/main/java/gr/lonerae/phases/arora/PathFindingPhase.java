@@ -292,7 +292,7 @@ public class PathFindingPhase {
         for (int i = 0; i < node.getPortals().size() - 1; i++) {
             for (int j = i + 1; j < node.getPortals().size(); j++) {
                 Segment segment = new Segment(node.getPortals().get(i), node.getPortals().get(j), true);
-                if (node.getTowns().size() == 1) {
+                if (node.getTownNumber() == 1) {
                     segment.setLength(SegmentUtils.getPathLengthThroughPoint(segment, node.getTowns().getFirst()));
                     segment.getTowns().add(node.getTowns().getFirst());
                 }
@@ -332,7 +332,7 @@ public class PathFindingPhase {
     private void parentPaths(QuadNode parent) {
         this.parent = parent;
         List<Point> parentPortals = parent.getPortals();
-        pointCountTarget = parent.getTowns().size();
+        pointCountTarget = parent.getTownNumber();
         ArrayList<QuadNode> children = new ArrayList<>(List.of(
                 parent.getChildren().get(GeneralConstants.UPPER_LEFT),
                 parent.getChildren().get(GeneralConstants.UPPER_RIGHT),
@@ -364,7 +364,7 @@ public class PathFindingPhase {
             if (!node.getSegment(exit, stitch).isEmpty()) {
                 Segment segment = node.getSegment(exit, stitch).getFirst();
                 if (!isNull(segment)) {
-                    pointCount += node.getTowns().size();
+                    pointCount += node.getTownNumber();
                     singleSolution.add(segment);
                     currentLength += segment.getLength();
                     savePath(node);
@@ -373,7 +373,7 @@ public class PathFindingPhase {
         } else {
             for (Segment segment : node.getSegmentsByEntrance().get(stitch)) {
                 // Segment contains previous vertex
-                pointCount += node.getTowns().size();
+                pointCount += node.getTownNumber();
                 singleSolution.add(segment);
                 currentLength += segment.getLength();
                 Point end = segment.getStart().equals(stitch) ? segment.getEnd() : segment.getStart();
@@ -397,7 +397,7 @@ public class PathFindingPhase {
         if (!singleSolution.isEmpty()) {
             currentLength -= singleSolution.getLast().getLength();
             singleSolution.removeLast();
-            pointCount -= node.getTowns().size();
+            pointCount -= node.getTownNumber();
         }
     }
 
@@ -420,6 +420,6 @@ public class PathFindingPhase {
         }
         currentLength -= singleSolution.getLast().getLength();
         singleSolution.removeLast();
-        pointCount -= node.getTowns().size();
+        pointCount -= node.getTownNumber();
     }
 }

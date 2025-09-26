@@ -1,8 +1,6 @@
 package gr.lonerae.model;
 
 import lombok.Data;
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 
 import java.util.Objects;
 

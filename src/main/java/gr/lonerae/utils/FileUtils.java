@@ -2,17 +2,15 @@ package gr.lonerae.utils;
 
 import gr.lonerae.Main;
 import gr.lonerae.model.Point;
+import gr.lonerae.model.Solution;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.io.*;
+import java.util.*;
 
 public class FileUtils {
     private static final String TSP_INSTANCE_PATH = "/instances/TSP/%s.tsp";
     private static final String TSP_OPTIMAL_PATH = "/instances/TSP/%s.opt.tour";
+    private static final String TSP_CACHE_PATH = "cache/%s.cache";
 
     private static final String ORIENTEERING_INSTANCE_PATH = "/instances/Orienteering/%s.txt";
 
@@ -36,6 +34,27 @@ public class FileUtils {
             return points;
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    public static void saveKTSPSolution(String instance, Map<Integer, Solution> kTSPSolutions) {
+        File solutionFile = new File(TSP_CACHE_PATH.formatted(instance));
+        try (FileOutputStream outputStream = new FileOutputStream(solutionFile)) {
+            StringBuilder builder = new StringBuilder();
+            // start end e portals
+            for (Map.Entry<Integer, Solution> entry : kTSPSolutions.entrySet()) {
+                builder
+                        .append(entry.getKey())
+                        .append(" ")
+                        .append(String.join("," , entry.getValue().getSequence().stream().map(Point::toString).toList()))
+                        .append(" ")
+                        .append(entry.getValue().getLength())
+                        .append("\n");
+            }
+            byte[] strToBytes = builder.toString().getBytes();
+            outputStream.write(strToBytes);
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
         }
     }
 

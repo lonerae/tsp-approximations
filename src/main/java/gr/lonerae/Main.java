@@ -28,7 +28,7 @@ public class Main {
     private static Map<String, Integer> initializeTSPInstances() {
         Map<String, Integer> solvedInstances = new HashMap<>();
 //        solvedInstances.put("a280", 2579);
-        solvedInstances.put("berlin52", 7542);
+//        solvedInstances.put("berlin52", 7542);
 //        solvedInstances.put("ch130", 6110);
 //        solvedInstances.put("ch150", 6528);
 //        solvedInstances.put("eil101", 629);
@@ -43,7 +43,7 @@ public class Main {
 //        solvedInstances.put("pr76", 108159);
 //        solvedInstances.put("rat195", 2323);
 //        solvedInstances.put("st70", 675);
-//        solvedInstances.put("test", 0);
+        solvedInstances.put("test", 0);
 //        solvedInstances.put("test2", 0);
 //        solvedInstances.put("set64", 0);
         return solvedInstances;
@@ -155,6 +155,7 @@ public class Main {
                 res = solveInstanceForChosenE(portalsPerNodeSide, e, points, res);
             }
             if (!isNull(res) && !res.isEmpty()) {
+                FileUtils.saveKTSPSolution(entry.getKey(), res);
                 for (Solution kTspSolution : res.values()) {
                     plotGraphs(entry.getKey(), kTspSolution, kTspSolution.getE(), kTspSolution.getPortalsPerSide());
                     TimeUnit.SECONDS.sleep(1);
@@ -243,7 +244,12 @@ public class Main {
 
     private static Map<Integer, Solution> solveInstanceForChosenEAndPortalsPerSide(double e, List<Point> points, int portals, PreProcessingPhase preProcessingPhaseInstance) {
         LOGGER.log(Level.INFO, "PORTALS: {}", portals);
-        return Arora.calculateWithEndpoints(preProcessingPhaseInstance, portals, points, preProcessingPhaseInstance.getClusters(), true, new Point(25,185), new Point(1740,245), preProcessingPhaseInstance.getTowns().size(), false);
+        Point start = CommonUtils.minimumPoint(points);
+        Point end = CommonUtils.maximumPoint(points);
+        if (isNull(start) || isNull(end)) {
+            throw new RuntimeException();
+        }
+        return Arora.calculateWithEndpoints(preProcessingPhaseInstance, portals, points, preProcessingPhaseInstance.getClusters(), true, new Point(start), new Point(end), preProcessingPhaseInstance.getTowns().size(), false);
     }
 
     private static void plotGraphs(String key, Solution res, Double e, Integer portalsPerNodeSide) {

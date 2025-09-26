@@ -5,8 +5,6 @@ import lombok.Data;
 import java.util.ArrayList;
 import java.util.List;
 
-import static java.util.Objects.isNull;
-
 @Data
 public class Segment {
     private Point start;
@@ -36,11 +34,6 @@ public class Segment {
         for (Point town : segment.getTowns()) {
             this.towns.add(new Point(town));
         }
-    }
-
-    public void traverseTown(Point town) {
-        this.townNumber++;
-        this.towns.add(town);
     }
 
     @Override
