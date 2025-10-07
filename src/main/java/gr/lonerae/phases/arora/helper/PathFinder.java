@@ -6,10 +6,7 @@ import gr.lonerae.model.Point;
 import gr.lonerae.model.QuadNode;
 import gr.lonerae.model.Segment;
 import gr.lonerae.phases.arora.QuadtreePhase;
-import gr.lonerae.utils.PathUtils;
-import gr.lonerae.utils.PointUtils;
-import gr.lonerae.utils.QuadTreeUtils;
-import gr.lonerae.utils.SegmentUtils;
+import gr.lonerae.utils.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import org.apache.logging.log4j.Level;
@@ -30,8 +27,6 @@ public class PathFinder implements Runnable {
     private QuadNode parent;
     private final Point startingTown;
     private final Point finishingTown;
-    private Point entrance;
-    private Point exit;
 
     Map<SegmentKey, Double> bestLengthHashMap = new HashMap<>();
 
@@ -101,13 +96,13 @@ public class PathFinder implements Runnable {
         }
         iteratedNodes.add(currentParent);
         parentPaths(currentParent);
-        List<Segment> segTest = updateSegments(currentParent);
-        currentParent.setSegments(segTest);
-        for (Segment s : segTest) {
-            updateSegments(currentParent, s);
-        }
+        List<Segment> initialSegments = updateSegments(currentParent);
+        currentParent.setSegments(initialSegments);
         currentParent.setSegments(currentParent.getSegments().stream().distinct().toList());
         removeSuboptimalSegments(currentParent);
+        for (Segment segment : currentParent.getSegments()) {
+            updateSegments(currentParent, segment);
+        }
         if (!isNull(currentParent.getParent())) {
             calculateParentPortals(currentParent.getParent(), currentParent.getPortals());
             currentParent.getParent().setTraversed(currentParent.getParent().getTraversed() + 1);
@@ -123,10 +118,10 @@ public class PathFinder implements Runnable {
         int loops = (parentPortals.size() * (parentPortals.size() - 1) / 2);
         int currentLoop = 0;
         for (int i = 0; i < parentPortals.size() - 1; i++) {
-            entrance = parentPortals.get(i);
             for (int j = i + 1; j < parentPortals.size(); j++) {
-                exit = parentPortals.get(j);
-                searchChildren(entrance, children);
+                Point entrance = parentPortals.get(i);
+                Point exit = parentPortals.get(j);
+                searchChildren(entrance, children, entrance, exit);
                 ProgressBar.showProgress(currentLoop++, loops);
             }
         }
@@ -175,15 +170,15 @@ public class PathFinder implements Runnable {
         }
     }
 
-    private void searchChildren(Point stitch, ArrayList<QuadNode> unvisited) {
+    private void searchChildren(Point stitch, ArrayList<QuadNode> unvisited, Point entrance, Point exit) {
         for (QuadNode node : unvisited) {
             if (!isNull(node.getSegmentsByEntrance().get(stitch))) {
-                iterateNodeSegments(stitch, unvisited, node);
+                iterateNodeSegments(stitch, unvisited, node, entrance, exit);
             }
         }
     }
 
-    private void iterateNodeSegments(Point stitch, ArrayList<QuadNode> unvisited, QuadNode node) {
+    private void iterateNodeSegments(Point stitch, ArrayList<QuadNode> unvisited, QuadNode node, Point entrance, Point exit) {
         ArrayList<QuadNode> updatedUnvisited = new ArrayList<>(unvisited);
         updatedUnvisited.remove(node);
         if (!isNull(node.getSegmentsByEntrance().get(exit))) {
@@ -195,12 +190,12 @@ public class PathFinder implements Runnable {
                     continue;
                 }
                 currentSolution.add(segment);
-                savePath();
+                savePath(entrance, exit);
             }
-        } else continueToNeighborNode(stitch, node, updatedUnvisited);
+        } else continueToNeighborNode(stitch, node, updatedUnvisited, entrance, exit);
     }
 
-    private void continueToNeighborNode(Point stitch, QuadNode node, ArrayList<QuadNode> updatedUnvisited) {
+    private void continueToNeighborNode(Point stitch,  QuadNode node, ArrayList<QuadNode> updatedUnvisited, Point entrance, Point exit) {
         for (Segment segment : node.getSegmentsByEntrance().get(stitch)) {
             if (
                     (node.getTowns().contains(startingTown) && !segment.getTowns().contains(startingTown)) ||
@@ -211,14 +206,14 @@ public class PathFinder implements Runnable {
             currentSolution.add(segment);
             Point nextStitch = segment.getStart().equals(stitch) ? segment.getEnd() : segment.getStart();
             if (segment.getStart().equals(exit) || segment.getEnd().equals(exit)) {
-                savePath();
+                savePath(entrance, exit);
             } else if (
                     updatedUnvisited.isEmpty() ||
                     this.parent.getPortals().contains(nextStitch)
             ) {
                 backtrack();
             } else {
-                searchChildren(nextStitch, updatedUnvisited);
+                searchChildren(nextStitch, updatedUnvisited, entrance, exit);
                 backtrack();
             }
         }
@@ -230,18 +225,18 @@ public class PathFinder implements Runnable {
         }
     }
 
-    private void savePath() {
+    private void savePath(Point entrance, Point exit) {
         Path formalSolution = new Path();
         formalSolution.setEntrance(entrance);
         formalSolution.setExit(exit);
-        constructSolution(formalSolution);
+        constructSolution(formalSolution, entrance, exit);
 
         updateMap(formalSolution, entrance, exit);
         updateMap(formalSolution, exit, entrance);
         currentSolution.removeLast();
     }
 
-    private void constructSolution(Path formalSolution) {
+    private void constructSolution(Path formalSolution, Point entrance, Point exit) {
         for (Segment segment : currentSolution) {
             formalSolution.addLength(segment.getLength());
             formalSolution.addSegment(segment);
@@ -250,10 +245,10 @@ public class PathFinder implements Runnable {
                 formalSolution.getInner().add(segment.getInner().stream().distinct().toList().getFirst());
             }
         }
-        setSolutionNode(formalSolution);
+        setSolutionNode(formalSolution, entrance, exit);
     }
 
-    private void setSolutionNode(Path formalSolution) {
+    private void setSolutionNode(Path formalSolution, Point entrance, Point exit) {
         for (QuadNode node : iteratedNodes) {
             if (
                 node.getPortals().contains(entrance) &&
