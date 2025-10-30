@@ -364,6 +364,7 @@ public class KPathFindingPhase {
                 }
             }
         }
+        if (sequence.isEmpty() || !sequence.contains(start.getOriginal())) return;
         if (!sequence.getFirst().equals(start.getOriginal())) {
             sequence.addFirst(sequence.remove(sequence.indexOf(start.getOriginal())));
         }

@@ -33,8 +33,8 @@ public class PointUtils {
             if (minY > point.getY()) minY = point.getY();
             if (maxY < point.getY()) maxY = point.getY();
         }
-        dimensions[0] = maxX - minX;
-        dimensions[1] = maxY - minY;
+        dimensions[0] = maxX;
+        dimensions[1] = maxY;
         return dimensions;
     }
 }

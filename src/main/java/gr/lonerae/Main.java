@@ -1,7 +1,8 @@
 package gr.lonerae;
 
 import gr.lonerae.exception.CustomException;
-import gr.lonerae.graphics.Plotter;
+import gr.lonerae.graphics.ConnectPointsPanel;
+import gr.lonerae.graphics.PointNormalizer;
 import gr.lonerae.model.Point;
 import gr.lonerae.model.Solution;
 import gr.lonerae.phases.arora.PreProcessingPhase;
@@ -13,14 +14,21 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.swing.*;
+import java.awt.*;
+import java.awt.geom.Point2D;
 import java.io.*;
 import java.util.*;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.Objects.isNull;
 
 public class Main {
     public static final String K_TSP_CACHE_FILE = "cache/%s.cache";
+    public static final String ORIENTEERING_CACHE_FILE = "cache/%s_%s.cache";
+    public static final int PANEL_DIMENSION = 800;
+    public static final double PANEL_MARGIN = 10;
+
     private static boolean isTSP;
     private static boolean isKTSP;
 
@@ -32,14 +40,14 @@ public class Main {
     private static Map<String, Integer> initializeTSPInstances() {
         Map<String, Integer> solvedInstances = new HashMap<>();
 //        solvedInstances.put("a280", 2579);
-        solvedInstances.put("berlin52", 7542);
+//        solvedInstances.put("berlin52", 7542);
 //        solvedInstances.put("ch130", 6110);
 //        solvedInstances.put("ch150", 6528);
-//        solvedInstances.put("eil101", 629);
+        solvedInstances.put("eil101", 629);
 //        solvedInstances.put("kroA100", 21282);
 //        solvedInstances.put("kroC100", 20749);
 //        solvedInstances.put("kroD100", 21294);
-        solvedInstances.put("lin105", 14379);
+//        solvedInstances.put("lin105", 14379);
 //        solvedInstances.put("pr76", 108159);
 //        solvedInstances.put("st70", 675);
 //        solvedInstances.put("test", 0);
@@ -50,9 +58,9 @@ public class Main {
 
     private static Map<String, Integer> initializeOrienteeringInstances() {
         Map<String, Integer> solvedInstances = new HashMap<>();
-        solvedInstances.put("set64", 80);
+//        solvedInstances.put("set64", 80);
 //        solvedInstances.put("set66", 130);
-//        solvedInstances.put("tsiligirides1", 85);
+        solvedInstances.put("tsiligirides1", 85);
 //        solvedInstances.put("tsiligirides2", 45);
 //        solvedInstances.put("tsiligirides3", 110);
 //        solvedInstances.put("test", 0);
@@ -143,23 +151,50 @@ public class Main {
         } else if (isKTSP) {
             return solveKTsp(entry, eValues, portalsPerNodeSide, avgPerfomance, points);
         } else {
-            return solveOrienteering(points);
+            return solveOrienteering(entry, points);
         }
     }
 
-    private static int solveOrienteering(List<Point> points) {
+    private static int solveOrienteering(Map.Entry<String, Integer> entry, List<Point> points) {
         LOGGER.log(Level.INFO, divisionLine);
-        Solution finalSolution = Korula.calculate(points);
-        if (!isNull(finalSolution)) {
-            LOGGER.log(Level.INFO, "LENGTH OF GOTTLIEB SOLUTION: {}", finalSolution.getLength());
-            plotKTSPGraphs(finalSolution, 1.0, 1);
-        } else {
-            String message = prop.getProperty("no_solution_found_error");
-            LOGGER.log(Level.INFO, message);
+        double[] dimensions = PointUtils.findDimensions(points);
+        try(BufferedReader br = new BufferedReader(new FileReader(ORIENTEERING_CACHE_FILE.formatted(entry.getKey(), "MAX")))) {
+            return readOrienteeringCacheFile(br, dimensions);
+        } catch (IOException ex) {
+            Solution finalSolution = Korula.calculate(points);
+            if (!isNull(finalSolution)) {
+                LOGGER.log(Level.INFO, "LENGTH OF GOTTLIEB SOLUTION: {}", finalSolution.getLength());
+                FileUtils.saveOrienteeringSolution(entry.getKey(), finalSolution);
+                plotKTSPOrienteeringGraphs(finalSolution, 1.0, 1);
+            } else {
+                String message = prop.getProperty("no_solution_found_error");
+                LOGGER.log(Level.INFO, message);
+            }
+        } catch (InterruptedException e) {
+            LOGGER.log(Level.WARN, "Interrupted!", e);
+            /* Clean up whatever needs to be handled before interrupting  */
+            Thread.currentThread().interrupt();
         }
         return -1;
     }
 
+    private static int readOrienteeringCacheFile(BufferedReader br, double[] dimensions) throws IOException, InterruptedException {
+        String line = br.readLine();
+        while (line != null) {
+            String[] segments = line.split(" ");
+            String[] pointsToDraw = segments[0].split("\\),");
+            ArrayList<Point> solutionPoints = new ArrayList<>();
+            for (String point : pointsToDraw) {
+                String[] coords = point.split("\\(")[1].split("\\)")[0].split(",");
+                solutionPoints.add(new Point(Double.parseDouble(coords[0]), Double.parseDouble(coords[1])));
+            }
+            Solution orienteeringSolution = new Solution(Double.parseDouble(segments[2]), solutionPoints, 1, 1, false, dimensions);
+            plotKTSPOrienteeringGraphs(orienteeringSolution, orienteeringSolution.getE(), orienteeringSolution.getPortalsPerSide());
+            TimeUnit.SECONDS.sleep(1);
+            line = br.readLine();
+        }
+        return 0;
+    }
     private static double solveKTsp(Map.Entry<String, Integer> entry, List<Double> eValues, List<Integer> portalsPerNodeSide, double avgPerfomance, List<Point> points) {
         double[] dimensions = PointUtils.findDimensions(points);
         try(BufferedReader br = new BufferedReader(new FileReader(K_TSP_CACHE_FILE.formatted(entry.getKey())))) {
@@ -193,7 +228,7 @@ public class Main {
             avgPerfomance += performance;
             LOGGER.log(Level.INFO, "PERFORMANCE: {}%", performance);
             LOGGER.log(Level.INFO, "BEST SOLUTION: {}%", res.getLength());
-            plotTSPGraphs(entry.getKey(), res, res.getDimensions(), original, res.getE(), res.getPortalsPerSide());
+            plotTSPGraphs(entry.getKey(), res, original, res.getE(), res.getPortalsPerSide());
         }
         return avgPerfomance;
     }
@@ -215,7 +250,7 @@ public class Main {
                     solutionPoints.add(new Point(Double.parseDouble(coords[0]), Double.parseDouble(coords[1])));
                 }
                 Solution kTspSolution = new Solution(Double.parseDouble(segments[2]), solutionPoints, 1, 1, false, dimensions);
-                plotKTSPGraphs(kTspSolution, kTspSolution.getE(), kTspSolution.getPortalsPerSide());
+                plotKTSPOrienteeringGraphs(kTspSolution, kTspSolution.getE(), kTspSolution.getPortalsPerSide());
                 TimeUnit.SECONDS.sleep(1);
             }
             line = br.readLine();
@@ -307,18 +342,12 @@ public class Main {
         return Arora.calculateWithEndpoints(preProcessingPhaseInstance, portals, points, preProcessingPhaseInstance.getClusters(), false, new Point(start), new Point(end), preProcessingPhaseInstance.getTowns().size(), false);
     }
 
-    private static void plotKTSPGraphs(Solution res, Double e, Integer portalsPerNodeSide) {
-        Plotter.PlotSolution plotSolution = new Plotter.PlotSolution(res.getSequence(), res.getDimensions(), false);
-        plotSolution.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
-        plotSolution.setVisible(true);
-        plotSolution.setTitle("k: " + res.getSequence().size() + ", e: " + e + ", portals: " + portalsPerNodeSide);
+    private static void plotKTSPOrienteeringGraphs(Solution res, Double e, Integer portalsPerNodeSide) {
+        plotGraph(res.getSequence(), "k: " + res.getSequence().size() + ", e: " + e + ", portals: " + portalsPerNodeSide, false);
     }
 
-    private static void plotTSPGraphs(String key, Solution res, double[] dimensions, List<Point> original, Double e, Integer portalsPerNodeSide) {
-        Plotter.PlotSolution plotSolution = new Plotter.PlotSolution(res.getSequence(), dimensions, true);
-        plotSolution.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
-        plotSolution.setVisible(true);
-        plotSolution.setTitle("instance: " + key + ", e: " + e + ", portals: " + portalsPerNodeSide);
+    private static void plotTSPGraphs(String key, Solution res, List<Point> original, Double e, Integer portalsPerNodeSide) {
+        plotGraph(res.getSequence(), "instance: " + key + ", e: " + e + ", portals: " + portalsPerNodeSide, true);
 
         List<Integer> optimalIndexes = FileUtils.readTSPOptTour(key);
         if (!optimalIndexes.isEmpty()) {
@@ -326,10 +355,26 @@ public class Main {
             for (Integer index : optimalIndexes) {
                 optimalSequence.add(original.get(index));
             }
-            Plotter.PlotSolution plotOptimal = new Plotter.PlotSolution(optimalSequence, dimensions, true);
-            plotOptimal.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-            plotOptimal.setVisible(true);
-            plotOptimal.setTitle(key + " optimal");
+            plotGraph(optimalSequence, key + " optimal", true);
         }
+    }
+
+    private static void plotGraph(List<Point> sequence, String title, boolean circular) {
+        SwingUtilities.invokeLater(() -> {
+
+            List<Point2D.Double> normalizedPoints = PointNormalizer.normalize(
+                    sequence.stream().map(p -> new Point2D.Double(p.getX(), p.getY())).toList(), PANEL_DIMENSION, PANEL_DIMENSION, PANEL_MARGIN
+            );
+
+            ConnectPointsPanel panel = new ConnectPointsPanel(normalizedPoints, circular);
+            panel.setPreferredSize(new Dimension(PANEL_DIMENSION, PANEL_DIMENSION));
+            JFrame frame = new JFrame(title);
+            frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+            frame.setSize(800, 800);
+            frame.add(panel);
+            frame.pack();
+            frame.setLocationRelativeTo(null);
+            frame.setVisible(true);
+        });
     }
 }

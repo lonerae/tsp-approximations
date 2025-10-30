@@ -11,6 +11,7 @@ public class FileUtils {
     private static final String TSP_INSTANCE_PATH = "/instances/TSP/%s.tsp";
     private static final String TSP_OPTIMAL_PATH = "/instances/TSP/%s.opt.tour";
     private static final String TSP_CACHE_PATH = "cache/%s.cache";
+    private static final String ORIENTEERING_CACHE_PATH = "cache/%s_%s.cache";
 
     private static final String ORIENTEERING_INSTANCE_PATH = "/instances/Orienteering/%s.txt";
 
@@ -72,6 +73,26 @@ public class FileUtils {
             return points;
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    public static void saveOrienteeringSolution(String instance, Solution solution) {
+        File solutionFile;
+//        if (solution.getTimeLimit() == Double.MAX_VALUE) {
+            solutionFile = new File(ORIENTEERING_CACHE_PATH.formatted(instance, "MAX"));
+//        }
+//        else solutionFile = new File(ORIENTEERING_CACHE_PATH.formatted(instance, solution.getTimeLimit()));
+        try (FileOutputStream outputStream = new FileOutputStream(solutionFile)) {
+            int plurality = solution.getSequence().stream().mapToInt(Point::getPlurality).sum();
+            String builder = String.join(",", solution.getSequence().stream().map(Point::toString).toList()) +
+                    " " +
+                    plurality +
+                    " " +
+                    solution.getLength();
+            byte[] strToBytes = builder.getBytes();
+            outputStream.write(strToBytes);
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
         }
     }
 

@@ -24,26 +24,26 @@ public class Korula {
         Solution bestSolution = null;
         int i = 1;
         bestSolution = Gottlieb.calculate(points.getFirst(), points.get(1), points, TIME_LIMIT);
-        for (Point point : points) {
-            if (point.getPlurality() == 0) continue;
-            LOGGER.log(Level.INFO, "KORULA ROUND {}", i);
-            List<Point> pointsCopy = CommonUtils.deepCopy(points);
-            int benchmark = point.getPlurality();
-            List<Point> filteredPoints = filterPoints(points, pointsCopy, benchmark);
-            updateWeights(points, filteredPoints, benchmark);
-            Solution finalSolution = Gottlieb.calculate(filteredPoints.getFirst(), filteredPoints.get(1), filteredPoints, TIME_LIMIT);
-            if (!isNull(finalSolution)) {
-                if (finalSolution.getSequence().size() > bestTowns) {
-                    bestSolution = finalSolution;
-                    bestTowns = finalSolution.getSequence().size();
-                    bestLength = finalSolution.getLength();
-                } else if (finalSolution.getSequence().size() == bestTowns && finalSolution.getLength() < bestLength) {
-                    bestSolution = finalSolution;
-                    bestLength = finalSolution.getLength();
-                }
-            }
-            i++;
-        }
+//        for (Point point : points) {
+//            if (point.getPlurality() == 0) continue;
+//            LOGGER.log(Level.INFO, "KORULA ROUND {}", i);
+//            List<Point> pointsCopy = CommonUtils.deepCopy(points);
+//            int benchmark = point.getPlurality();
+//            List<Point> filteredPoints = filterPoints(points, pointsCopy, benchmark);
+//            updateWeights(points, filteredPoints, benchmark);
+//            Solution finalSolution = Gottlieb.calculate(filteredPoints.getFirst(), filteredPoints.get(1), filteredPoints, TIME_LIMIT);
+//            if (!isNull(finalSolution)) {
+//                if (finalSolution.getSequence().size() > bestTowns) {
+//                    bestSolution = finalSolution;
+//                    bestTowns = finalSolution.getSequence().size();
+//                    bestLength = finalSolution.getLength();
+//                } else if (finalSolution.getSequence().size() == bestTowns && finalSolution.getLength() < bestLength) {
+//                    bestSolution = finalSolution;
+//                    bestLength = finalSolution.getLength();
+//                }
+//            }
+//            i++;
+//        }
         return bestSolution;
     }
 

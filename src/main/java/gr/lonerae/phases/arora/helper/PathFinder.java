@@ -91,9 +91,9 @@ public class PathFinder implements Runnable {
     }
 
     private QuadNode calculateParentNodeSegments(QuadNode currentParent) {
-        if (currentParent.getSide() != quadtreePhaseInstance.getRoot().getSide()) {
-            LOGGER.log(Level.INFO, PROGRESS_MESSAGE, currentParent);
-        }
+//        if (currentParent.getSide() != quadtreePhaseInstance.getRoot().getSide()) {
+//            LOGGER.log(Level.INFO, PROGRESS_MESSAGE, currentParent);
+//        }
         iteratedNodes.add(currentParent);
         parentPaths(currentParent);
         List<Segment> initialSegments = updateSegments(currentParent);
@@ -122,7 +122,7 @@ public class PathFinder implements Runnable {
                 Point entrance = parentPortals.get(i);
                 Point exit = parentPortals.get(j);
                 searchChildren(entrance, children, entrance, exit);
-                ProgressBar.showProgress(currentLoop++, loops);
+//                ProgressBar.showProgress(currentLoop++, loops);
             }
         }
     }

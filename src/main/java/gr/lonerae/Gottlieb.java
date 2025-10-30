@@ -91,39 +91,46 @@ public class Gottlieb {
 
     private static int prog = 0;
     private static void multiThreadedTSP(List<Point> points, int index) {
-        for (int i = index + 1; i < points.size(); i++) {
+        for (int i = index; i < points.size(); i++) {
             List<Callable<Void>> taskList = new ArrayList<>();
-            int count = (points.size() - index - 1);
-            for (int j = index + 20; j < points.size(); j++) {
+            for (int j = index; j < points.size(); j++) {
                 int finalI = i;
                 int finalJ = j;
-                CallbackTask task = new CallbackTask(
-                        () -> {
-                            Map<Integer, Solution> s = aroraSubRoutine(new Point(points.get(finalI)), new Point(points.get(finalJ)), CommonUtils.deepCopy(points.subList(Math.min(finalI, finalJ), Math.max(finalI, finalJ) + 1)), points.size());
-                            for (Map.Entry<Integer, Solution> entry : s.entrySet()) {
-                                AroraKey key = new AroraKey(new Point(points.get(finalI)), new Point(points.get(finalJ)), new ArrayList<>(), entry.getKey());
-                                fastAroraSolutions.put(key, entry.getValue());
-                            }
-
-                        },
-                        () -> {
-                            prog += 1;
-                            String rounded = String.format("%.2f", (double) prog / count * 100);
-                            System.out.print(finalI + ": " + rounded + "%\r");
-                        }
-                );
-                taskList.add(task);
-            }
-            ExecutorService executor = Executors.newFixedThreadPool(count);
-            try {
-                //start the threads and wait for them to finish
-                executor.invokeAll(taskList);
-            } catch (InterruptedException ie) {
-                System.out.println("OOPS");
-            } finally {
+                int count = (int) Math.pow((double) points.size() - index - 1, 2);
                 prog = 0;
-                System.out.println("");
-                executor.close();
+                for (int x = index; x < points.size(); x++) {
+                    for (int y = index; y < points.size(); y++) {
+                        int finalX = x;
+                        int finalY = y;
+                        CallbackTask task = new CallbackTask(
+                                () -> {
+                                    Map<Integer, Solution> s = aroraSubRoutine(new Point(points.get(finalI)), new Point(points.get(finalJ)), CommonUtils.deepCopy(points.subList(Math.min(finalX, finalY), Math.max(finalX, finalY) + 1)), points.size());
+                                    for (Map.Entry<Integer, Solution> entry : s.entrySet()) {
+                                        AroraKey key = new AroraKey(new Point(points.get(finalI)), new Point(points.get(finalJ)), CommonUtils.deepCopy(points.subList(Math.min(finalX, finalY), Math.max(finalX, finalY) + 1)), entry.getKey());
+                                        fastAroraSolutions.put(key, entry.getValue());
+                                    }
+
+                                },
+                                () -> {
+                                    prog += 1;
+                                    String rounded = String.format("%.2f", (double) prog / count * 100);
+                                    System.out.print(finalI + ": " + rounded + "%\r");
+                                }
+                        );
+                        taskList.add(task);
+                    }
+                }
+                ExecutorService executor = Executors.newFixedThreadPool(count);
+                try {
+                    //start the threads and wait for them to finish
+                    executor.invokeAll(taskList);
+                } catch (InterruptedException ie) {
+                    System.out.println("OOPS");
+                } finally {
+                    prog = 0;
+                    System.out.println("");
+                    executor.close();
+                }
             }
         }
     }
@@ -169,11 +176,6 @@ public class Gottlieb {
         for (int k1 = 3; k1 <= i + 1; k1++) {
             LOGGER.log(Level.INFO, "        NUMBER OF TOWNS: {}", k1);
             goal = new GottliebKey(points.get(i), points.get(d1), k1);
-            Solution temp = orienteeringSolutions.get(new GottliebKey(points.get(i-1), points.get(d1), k1));
-            if (!isNull(temp)) {
-                orienteeringSolutions.put(goal, new Solution(temp.getLength(), new ArrayList<>(temp.getSequence()), 0, 0, true, null));
-                continue;
-            }
             double best = Double.MAX_VALUE;
             int bestScore = Integer.MIN_VALUE;
             ArrayList<Point> bestSequence = new ArrayList<>();
@@ -183,15 +185,15 @@ public class Gottlieb {
                     for (int c = j+1; c <= i; c++) {
                         List<Point> subList = CommonUtils.deepCopy(points.subList(j+1, i+1));
                         Map<Integer, Solution> aroraSolutions = new HashMap<>();
-                        if (fastAroraSolutions.containsKey(new AroraKey(new Point(points.get(c)), new Point(points.get(d1)), new ArrayList<>(), k1))) {
+                        if (fastAroraSolutions.containsKey(new AroraKey(new Point(points.get(c)), new Point(points.get(d1)), subList, k1))) {
                             for (int tt = 2; tt <= k1; tt++) {
-                                AroraKey key = new AroraKey(new Point(points.get(c)), new Point(points.get(d1)), new ArrayList<>(), tt);
-                                aroraSolutions.put(tt, fastAroraSolutions.get(new AroraKey(new Point(points.get(c)), new Point(points.get(d1)), new ArrayList<>(), tt)));
+                                AroraKey key = new AroraKey(new Point(points.get(c)), new Point(points.get(d1)), subList, tt);
+                                aroraSolutions.put(tt, fastAroraSolutions.get(key));
                             }
                         } else {
                             aroraSolutions = aroraSubRoutine(new Point(points.get(c)), new Point(points.get(d1)), subList, k1);
                             for (int tt = 2; tt <= k1; tt++) {
-                                AroraKey key = new AroraKey(new Point(points.get(c)), new Point(points.get(d1)), new ArrayList<>(), tt);
+                                AroraKey key = new AroraKey(new Point(points.get(c)), new Point(points.get(d1)), subList, tt);
                                 fastAroraSolutions.put(key, aroraSolutions.get(tt));
                             }
                         }
@@ -230,7 +232,7 @@ public class Gottlieb {
         }
         PreProcessingPhase preProcessingPhaseInstance = new PreProcessingPhase(copy, 1);
         preProcessingPhaseInstance.preprocess();
-        return Arora.calculateWithEndpoints(preProcessingPhaseInstance, 1, copy, preProcessingPhaseInstance.getClusters(), false, start, end, townNumber, true);
+        return Arora.calculateWithEndpoints(preProcessingPhaseInstance, 1, copy, preProcessingPhaseInstance.getClusters(), false, start, end, townNumber, false);
     }
 
     private static Solution manipulateFinalSolution(Point end, List<Point> points, double timeLimit) {
@@ -255,8 +257,33 @@ public class Gottlieb {
             actualBest += SegmentUtils.euclideanDistance(previousTown, town);
             previousTown = town;
         }
-        double xDimension = actualSequence.stream().max(Comparator.comparingDouble(Point::getX)).get().getX() - actualSequence.stream().min(Comparator.comparingDouble(Point::getX)).get().getX();
-        double yDimension = actualSequence.stream().max(Comparator.comparingDouble(Point::getY)).get().getY() - actualSequence.stream().min(Comparator.comparingDouble(Point::getY)).get().getY();
+        if (actualSequence.size() < points.size()) {
+            List<Point> remaining = corresponder.values().stream().filter(p -> !actualSequence.contains(p)).toList();
+            int bestIndex = -1;
+            double newBest = -1;
+            for (Point addition : remaining) {
+                for (int i = 1; i < actualSequence.size(); i++) {
+                    double current = actualBest
+                            - SegmentUtils.euclideanDistance(actualSequence.get(i-1), actualSequence.get(i))
+                            + SegmentUtils.euclideanDistance(actualSequence.get(i-1), addition)
+                            + SegmentUtils.euclideanDistance(addition, actualSequence.get(i));
+                    if (newBest == -1) {
+                        newBest = current;
+                        bestIndex = 1;
+                    } else if (current < newBest) {
+                        newBest = current;
+                        bestIndex = i;
+                    }
+                }
+                if (newBest < timeLimit) {
+                    actualSequence.add(bestIndex, addition);
+                    actualBest = newBest;
+                }
+            }
+        }
+        Untangler.untangle(actualSequence);
+        double xDimension = points.stream().max(Comparator.comparingDouble(Point::getX)).get().getX(); //- points.stream().min(Comparator.comparingDouble(Point::getX)).get().getX();
+        double yDimension = points.stream().max(Comparator.comparingDouble(Point::getY)).get().getY() - points.stream().min(Comparator.comparingDouble(Point::getY)).get().getY();
         return new Solution(actualBest, actualSequence, 0, 0, true, new double[]{xDimension, yDimension});
     }
 }
