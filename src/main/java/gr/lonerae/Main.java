@@ -1,6 +1,7 @@
 package gr.lonerae;
 
 import gr.lonerae.exception.CustomException;
+import gr.lonerae.graphics.ConnectPointsMultiPanel;
 import gr.lonerae.graphics.ConnectPointsPanel;
 import gr.lonerae.graphics.PointNormalizer;
 import gr.lonerae.model.Point;
@@ -17,6 +18,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.geom.Point2D;
 import java.io.*;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -29,13 +32,17 @@ public class Main {
     public static final int PANEL_DIMENSION = 800;
     public static final double PANEL_MARGIN = 10;
 
+    private static final double TIME_LIMIT =
+//            50;
+    Double.MAX_VALUE;
+
     private static boolean isTSP;
     private static boolean isKTSP;
+    private static boolean isMKTSP;
 
-    private static final Properties prop = new Properties();
     private static final Logger LOGGER = LogManager.getLogger();
 
-    private static String divisionLine;
+    private static final String DIVISION_LINE = "********************";
 
     private static Map<String, Integer> initializeTSPInstances() {
         Map<String, Integer> solvedInstances = new HashMap<>();
@@ -43,15 +50,16 @@ public class Main {
 //        solvedInstances.put("berlin52", 7542);
 //        solvedInstances.put("ch130", 6110);
 //        solvedInstances.put("ch150", 6528);
-        solvedInstances.put("eil101", 629);
+//        solvedInstances.put("eil101", 629);
 //        solvedInstances.put("kroA100", 21282);
 //        solvedInstances.put("kroC100", 20749);
 //        solvedInstances.put("kroD100", 21294);
 //        solvedInstances.put("lin105", 14379);
 //        solvedInstances.put("pr76", 108159);
 //        solvedInstances.put("st70", 675);
-//        solvedInstances.put("test", 0);
+        solvedInstances.put("test", 0);
 //        solvedInstances.put("test2", 0);
+//        solvedInstances.put("tsiligirides1", 85);
 //        solvedInstances.put("set64", 0);
         return solvedInstances;
     }
@@ -60,10 +68,10 @@ public class Main {
         Map<String, Integer> solvedInstances = new HashMap<>();
 //        solvedInstances.put("set64", 80);
 //        solvedInstances.put("set66", 130);
-        solvedInstances.put("tsiligirides1", 85);
+//        solvedInstances.put("tsiligirides1", 85);
 //        solvedInstances.put("tsiligirides2", 45);
 //        solvedInstances.put("tsiligirides3", 110);
-//        solvedInstances.put("test", 0);
+        solvedInstances.put("test", 0);
 //        solvedInstances.put("test2", 0);
         return solvedInstances;
     }
@@ -96,28 +104,22 @@ public class Main {
     private static boolean validate(String[] args) {
         if (args.length == 0) return false;
 
-        try {
-            prop.load(Main.class.getClassLoader().getResourceAsStream("messages.properties"));
-        }
-        catch (IOException ex) {
-            LOGGER.log(Level.ERROR, ex.getMessage());
-        }
-
-        if (args[0].equals(prop.getProperty("tsp"))) {
+        if (args[0].equals("tsp")) {
             isTSP = true;
-        } else if (args[0].equals(prop.getProperty("ktsp"))) {
+        } else if (args[0].equals("ktsp")) {
             isKTSP = true;
-        } else return args[0].equals(prop.getProperty("orienteering"));
+        } else if (args[0].equals("mktsp")) {
+            isMKTSP = true;
+        } else return args[0].equals("orienteering");
         return true;
     }
 
     public static void main(String[] args) {
+        Instant start = Instant.now();
         if (!validate(args)) return;
 
-        divisionLine = prop.getProperty("division_line");
-
         Map<String, Integer> solvedInstances;
-        if (isTSP || isKTSP) solvedInstances = initializeTSPInstances();
+        if (isTSP || isKTSP || isMKTSP) solvedInstances = initializeTSPInstances();
         else solvedInstances = initializeOrienteeringInstances();
 
         List<Double> eValues = initializeEValues();
@@ -128,19 +130,20 @@ public class Main {
             avgPerfomance = solveInstance(entry, eValues, portalsPerNodeSide, solvedInstances, avgPerfomance);
         }
         if (solvedInstances.size() > 1) {
-            LOGGER.log(Level.INFO, divisionLine);
-            String averagePerformance = prop.getProperty("average_performance").formatted(CommonUtils.round(avgPerfomance / solvedInstances.size()));
-            LOGGER.log(Level.INFO, averagePerformance);
+            LOGGER.log(Level.INFO, DIVISION_LINE);
+            LOGGER.log(Level.INFO, "AVG PERFORMANCE: {}", CommonUtils.round(avgPerfomance / solvedInstances.size()));
         }
+        Instant end = Instant.now();
+        Duration timeElapsed = Duration.between(start, end);
+        LOGGER.log(Level.INFO, "Elapsed time: {}", timeElapsed.toSeconds());
     }
 
     private static double solveInstance(Map.Entry<String, Integer> entry, List<Double> eValues, List<Integer> portalsPerNodeSide, Map<String, Integer> solvedInstances, double avgPerfomance) {
-        LOGGER.log(Level.INFO, divisionLine);
-        String instance = prop.getProperty("instance").formatted(entry.getKey());
-        LOGGER.log(Level.INFO, instance);
+        LOGGER.log(Level.INFO, DIVISION_LINE);
+        LOGGER.log(Level.INFO, "INSTANCE {}", entry.getKey());
 
         List<Point> points;
-        if (isTSP || isKTSP) points = FileUtils.readTSPInstance(entry.getKey());
+        if (isTSP || isKTSP || isMKTSP) points = FileUtils.readTSPInstance(entry.getKey());
         else points = FileUtils.readOrienteeringInstance(entry.getKey());
 
         List<Point> original = new ArrayList<>();
@@ -156,19 +159,19 @@ public class Main {
     }
 
     private static int solveOrienteering(Map.Entry<String, Integer> entry, List<Point> points) {
-        LOGGER.log(Level.INFO, divisionLine);
+        LOGGER.log(Level.INFO, DIVISION_LINE);
         double[] dimensions = PointUtils.findDimensions(points);
-        try(BufferedReader br = new BufferedReader(new FileReader(ORIENTEERING_CACHE_FILE.formatted(entry.getKey(), "MAX")))) {
+        String signifier = TIME_LIMIT == Double.MAX_VALUE ? "MAX" : String.valueOf(TIME_LIMIT);
+        try(BufferedReader br = new BufferedReader(new FileReader(ORIENTEERING_CACHE_FILE.formatted(entry.getKey(), signifier)))) {
             return readOrienteeringCacheFile(br, dimensions);
         } catch (IOException ex) {
-            Solution finalSolution = Korula.calculate(points);
+            Solution finalSolution = Korula.calculate(points, TIME_LIMIT);
             if (!isNull(finalSolution)) {
                 LOGGER.log(Level.INFO, "LENGTH OF GOTTLIEB SOLUTION: {}", finalSolution.getLength());
-                FileUtils.saveOrienteeringSolution(entry.getKey(), finalSolution);
+                FileUtils.saveOrienteeringSolution(entry.getKey(), finalSolution, TIME_LIMIT);
                 plotKTSPOrienteeringGraphs(finalSolution, 1.0, 1);
             } else {
-                String message = prop.getProperty("no_solution_found_error");
-                LOGGER.log(Level.INFO, message);
+                LOGGER.log(Level.INFO, "NO SOLUTION FOUND FOR GIVEN TIME LIMIT.");
             }
         } catch (InterruptedException e) {
             LOGGER.log(Level.WARN, "Interrupted!", e);
@@ -197,23 +200,24 @@ public class Main {
     }
     private static double solveKTsp(Map.Entry<String, Integer> entry, List<Double> eValues, List<Integer> portalsPerNodeSide, double avgPerfomance, List<Point> points) {
         double[] dimensions = PointUtils.findDimensions(points);
-        try(BufferedReader br = new BufferedReader(new FileReader(K_TSP_CACHE_FILE.formatted(entry.getKey())))) {
-            return readKTspCacheFile(br, points, dimensions);
-        } catch (IOException ex) {
+//        try(BufferedReader br = new BufferedReader(new FileReader(K_TSP_CACHE_FILE.formatted(entry.getKey())))) {
+//            return readKTspCacheFile(br, points, dimensions);
+//        } catch (IOException ex) {
             Map<Integer, Solution> res = null;
             for (double e : eValues) {
                 res = solveKTSPInstanceForChosenE(portalsPerNodeSide, e, points, res);
             }
             if (!isNull(res) && !res.isEmpty()) {
                 FileUtils.saveKTSPSolution(entry.getKey(), res);
+                plotKTSPOrienteeringGraphs(res.get(points.size()), 1.0, 1);
             }
             return avgPerfomance;
-        } catch (InterruptedException e) {
-            LOGGER.log(Level.WARN, "Interrupted!", e);
-            /* Clean up whatever needs to be handled before interrupting  */
-            Thread.currentThread().interrupt();
-        }
-        return -1;
+//        } catch (InterruptedException e) {
+//            LOGGER.log(Level.WARN, "Interrupted!", e);
+//            /* Clean up whatever needs to be handled before interrupting  */
+//            Thread.currentThread().interrupt();
+//        }
+//        return -1;
     }
 
     private static double solveTSP(Map.Entry<String, Integer> entry, List<Double> eValues, List<Integer> portalsPerNodeSide, Map<String, Integer> solvedInstances, double avgPerfomance, List<Point> points, List<Point> original) {
@@ -334,12 +338,12 @@ public class Main {
 
     private static Map<Integer, Solution> solveInstanceForChosenEAndPortalsPerSide(List<Point> points, int portals, PreProcessingPhase preProcessingPhaseInstance) {
         LOGGER.log(Level.INFO, "PORTALS: {}", portals);
-        Point start = CommonUtils.minimumPoint(points);
-        Point end = CommonUtils.maximumPoint(points);
+        Point start = points.getFirst();// CommonUtils.minimumPoint(points);
+        Point end = points.get(1);//CommonUtils.maximumPoint(points);
         if (isNull(start) || isNull(end)) {
             throw new CustomException("Given endpoint wasn't found in instance's points.");
         }
-        return Arora.calculateWithEndpoints(preProcessingPhaseInstance, portals, points, preProcessingPhaseInstance.getClusters(), false, new Point(start), new Point(end), preProcessingPhaseInstance.getTowns().size(), false);
+        return Arora.calculateWithEndpoints(preProcessingPhaseInstance, portals, points, preProcessingPhaseInstance.getClusters(), false, new Point(start), new Point(end), preProcessingPhaseInstance.getTowns().size(), false, false);
     }
 
     private static void plotKTSPOrienteeringGraphs(Solution res, Double e, Integer portalsPerNodeSide) {
@@ -359,6 +363,10 @@ public class Main {
         }
     }
 
+    private static void plotMKTSPGraphs(String key, List<Solution> res, List<Point> original, Double e, Integer portalsPerNodeSide) {
+        plotMultiGraph(res, "instance: " + key + ", e: " + e + ", portals: " + portalsPerNodeSide);
+    }
+
     private static void plotGraph(List<Point> sequence, String title, boolean circular) {
         SwingUtilities.invokeLater(() -> {
 
@@ -367,6 +375,27 @@ public class Main {
             );
 
             ConnectPointsPanel panel = new ConnectPointsPanel(normalizedPoints, circular);
+            panel.setPreferredSize(new Dimension(PANEL_DIMENSION, PANEL_DIMENSION));
+            JFrame frame = new JFrame(title);
+            frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+            frame.setSize(800, 800);
+            frame.add(panel);
+            frame.pack();
+            frame.setLocationRelativeTo(null);
+            frame.setVisible(true);
+        });
+    }
+
+    private static void plotMultiGraph(List<Solution> solutions, String title) {
+        SwingUtilities.invokeLater(() -> {
+            List<List<Point2D.Double>> allRoutes = new ArrayList<>();
+            for (Solution solution : solutions) {
+               allRoutes.add(PointNormalizer.normalize(
+                       solution.getSequence().stream().map(p -> new Point2D.Double(p.getX(), p.getY())).toList(), PANEL_DIMENSION, PANEL_DIMENSION, PANEL_MARGIN
+               ));
+            }
+
+            ConnectPointsMultiPanel panel = new ConnectPointsMultiPanel(allRoutes);
             panel.setPreferredSize(new Dimension(PANEL_DIMENSION, PANEL_DIMENSION));
             JFrame frame = new JFrame(title);
             frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);

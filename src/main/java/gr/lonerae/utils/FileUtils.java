@@ -76,12 +76,12 @@ public class FileUtils {
         }
     }
 
-    public static void saveOrienteeringSolution(String instance, Solution solution) {
+    public static void saveOrienteeringSolution(String instance, Solution solution, double timeLimit) {
         File solutionFile;
-//        if (solution.getTimeLimit() == Double.MAX_VALUE) {
+        if (timeLimit == Double.MAX_VALUE) {
             solutionFile = new File(ORIENTEERING_CACHE_PATH.formatted(instance, "MAX"));
-//        }
-//        else solutionFile = new File(ORIENTEERING_CACHE_PATH.formatted(instance, solution.getTimeLimit()));
+        }
+        else solutionFile = new File(ORIENTEERING_CACHE_PATH.formatted(instance, timeLimit));
         try (FileOutputStream outputStream = new FileOutputStream(solutionFile)) {
             int plurality = solution.getSequence().stream().mapToInt(Point::getPlurality).sum();
             String builder = String.join(",", solution.getSequence().stream().map(Point::toString).toList()) +

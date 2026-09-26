@@ -5,11 +5,22 @@ import lombok.AllArgsConstructor;
 
 import java.util.List;
 
-@AllArgsConstructor
 public class RotationPhase {
     private Point start;
     private Point end;
-    private List<Point> points;
+    private List<Point[]> endpoints;
+    private final List<Point> points;
+
+    public RotationPhase(Point start, Point end, List<Point> points) {
+        this.start = start;
+        this.end = end;
+        this.points = points;
+    }
+
+    public RotationPhase(List<Point[]> endpoints, List<Point> points) {
+        this.endpoints = endpoints;
+        this.points = points;
+    }
 
     public void rotateOnEndpointAxis() {
         double xDisplacement = start.getX();

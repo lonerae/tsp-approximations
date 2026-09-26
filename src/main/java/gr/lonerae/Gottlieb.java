@@ -93,21 +93,23 @@ public class Gottlieb {
     private static void multiThreadedTSP(List<Point> points, int index) {
         for (int i = index; i < points.size(); i++) {
             List<Callable<Void>> taskList = new ArrayList<>();
-            for (int j = index; j < points.size(); j++) {
+            for (int j = i; j < points.size(); j++) {
                 int finalI = i;
                 int finalJ = j;
                 int count = (int) Math.pow((double) points.size() - index - 1, 2);
                 prog = 0;
                 for (int x = index; x < points.size(); x++) {
-                    for (int y = index; y < points.size(); y++) {
+                    for (int y = x; y < points.size(); y++) {
                         int finalX = x;
                         int finalY = y;
                         CallbackTask task = new CallbackTask(
                                 () -> {
-                                    Map<Integer, Solution> s = aroraSubRoutine(new Point(points.get(finalI)), new Point(points.get(finalJ)), CommonUtils.deepCopy(points.subList(Math.min(finalX, finalY), Math.max(finalX, finalY) + 1)), points.size());
+                                    Map<Integer, Solution> s = aroraSubRoutine(new Point(points.get(finalI)), new Point(points.get(finalJ)), CommonUtils.deepCopy(points.subList(finalX, finalY + 1)), points.size());
                                     for (Map.Entry<Integer, Solution> entry : s.entrySet()) {
-                                        AroraKey key = new AroraKey(new Point(points.get(finalI)), new Point(points.get(finalJ)), CommonUtils.deepCopy(points.subList(Math.min(finalX, finalY), Math.max(finalX, finalY) + 1)), entry.getKey());
+                                        AroraKey key = new AroraKey(new Point(points.get(finalI)), new Point(points.get(finalJ)), CommonUtils.deepCopy(points.subList(finalX, finalY + 1)), entry.getKey());
                                         fastAroraSolutions.put(key, entry.getValue());
+                                        key = new AroraKey(new Point(points.get(finalJ)), new Point(points.get(finalI)), CommonUtils.deepCopy(points.subList(finalX, finalY + 1)), entry.getKey());
+                                        if (!fastAroraSolutions.containsKey(key)) fastAroraSolutions.put(key, entry.getValue());
                                     }
 
                                 },
@@ -232,7 +234,7 @@ public class Gottlieb {
         }
         PreProcessingPhase preProcessingPhaseInstance = new PreProcessingPhase(copy, 1);
         preProcessingPhaseInstance.preprocess();
-        return Arora.calculateWithEndpoints(preProcessingPhaseInstance, 1, copy, preProcessingPhaseInstance.getClusters(), false, start, end, townNumber, false);
+        return Arora.calculateWithEndpoints(preProcessingPhaseInstance, 1, copy, preProcessingPhaseInstance.getClusters(), false, start, end, townNumber, false, false);
     }
 
     private static Solution manipulateFinalSolution(Point end, List<Point> points, double timeLimit) {

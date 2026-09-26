@@ -4,6 +4,7 @@ import com.google.common.collect.Sets;
 import gr.lonerae.model.*;
 import gr.lonerae.phases.arora.helper.PathFinder;
 import gr.lonerae.phases.arora.helper.Untangler;
+import gr.lonerae.utils.CommonUtils;
 import gr.lonerae.utils.SegmentUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -34,11 +35,14 @@ public class KPathFindingPhase {
     private final ArrayList<Point> onLinePoints = new ArrayList<>();
     private final List<Segment> tempSolution = new ArrayList<>();
     private final HashMap<Integer, Path> solutionMap = new HashMap<>();
+    private final HashMap<Integer, List<Path>> lenientSolutionMap = new HashMap<>();
+    private final HashMap<Integer, List<Solution>> allSolutionMap = new HashMap<>();
 
     private boolean sameNodes = false;
     private boolean oppositeNodes = false;
     private boolean withEarlyFinish = false;
     private boolean earlyFinish = false;
+    private boolean keepAll = false;
 
     public KPathFindingPhase(double squareSize, int townNumber, int timeLimit) {
         this.squareSize = squareSize;
@@ -46,9 +50,10 @@ public class KPathFindingPhase {
         this.timeLimit = timeLimit;
     }
 
-    public Map<Integer, Solution> iterateNodes(QuadtreePhase quadtreePhaseInstance, Map<Point, ArrayList<Point>> clusters,
-                                               boolean verbose, Point start, Point end, int k, boolean withEarlyFinish
+    public Map iterateNodes(QuadtreePhase quadtreePhaseInstance, Map<Point, ArrayList<Point>> clusters,
+                                               boolean verbose, Point start, Point end, int k, boolean withEarlyFinish, boolean keepAll
     ) {
+        this.keepAll = keepAll;
         this.withEarlyFinish = withEarlyFinish;
         this.start = start;
         this.end = end;
@@ -102,7 +107,18 @@ public class KPathFindingPhase {
     }
 
     private void solveKTSP(QuadNode originNode, ArrayList<QuadNode> unvisitedNodes) {
-        List<Segment> startingSegmentsCandidates = originNode.getSegments().stream().filter(segment -> segment.getTowns().contains(this.start)).toList();
+        List<Segment> startingSegmentsCandidatesInitial = originNode.getSegments().stream().filter(segment -> segment.getTowns().contains(this.start)).toList();
+        List<Segment> additions = new ArrayList<>();
+        for (Segment segment : startingSegmentsCandidatesInitial) {
+            if (segment.getTowns().contains(this.end)) {
+                Segment segmentWithoutEnd = new Segment(segment);
+                segmentWithoutEnd.getTowns().remove(this.end);
+                additions.add(segmentWithoutEnd);
+            }
+        }
+        ArrayList<Segment> startingSegmentsCandidates = new ArrayList<>();
+        startingSegmentsCandidates.addAll(startingSegmentsCandidatesInitial);
+        startingSegmentsCandidates.addAll(additions);
         int i = 0;
         while (i < startingSegmentsCandidates.size() && !earlyFinish) {
             Segment segmentCopy = new Segment(startingSegmentsCandidates.get(i));
@@ -112,8 +128,12 @@ public class KPathFindingPhase {
             }
             this.townsGoal -= segmentCopy.getTownNumber();
             tempSolution.add(segmentCopy);
-            if (segmentCopy.getTowns().contains(this.end)) constructPathAndUpdateSolutionMap();
-            else branchOutFromStart(segmentCopy, unvisitedNodes);
+            if (segmentCopy.getTowns().contains(this.end)) {
+                constructPathAndUpdateSolutionMap();
+            }
+            else {
+                branchOutFromStart(segmentCopy, unvisitedNodes);
+            }
             if (!earlyFinish) {
                 tempSolution.removeLast();
                 this.townsGoal += segmentCopy.getTownNumber();
@@ -170,7 +190,9 @@ public class KPathFindingPhase {
                 copyOfUnvisitedNodes.remove(node);
                 if (node.getTowns().contains(this.end)) completePath(stitch, node, copyOfUnvisitedNodes);
                 if (earlyFinish) break;
-                else continuePath(stitch, node, copyOfUnvisitedNodes);
+                else {
+                    continuePath(stitch, node, copyOfUnvisitedNodes);
+                }
             }
         }
         if (sameNodes && copyOfUnvisitedNodes.isEmpty()) {
@@ -355,19 +377,23 @@ public class KPathFindingPhase {
         ArrayList<Point> sequence = new ArrayList<>();
         Point lead = null;
         Segment currentSegment = null;
+        Point lastTown = null;
         for (Segment segment : solution.getSegments()) {
             for (Point town : segment.getTowns()) {
                 if (sequence.isEmpty()) sequence.add(town.getOriginal());
                 else {
+                    lastTown = town;
                     if (sequence.size() > 1) currentSegment = new Segment(sequence.get(sequence.size() - 2), sequence.getLast(), true);
                     lead = addTownToSequence(town, currentSegment, lead, sequence);
                 }
             }
         }
-        if (sequence.isEmpty() || !sequence.contains(start.getOriginal())) return;
-        if (!sequence.getFirst().equals(start.getOriginal())) {
-            sequence.addFirst(sequence.remove(sequence.indexOf(start.getOriginal())));
+        if (!onLinePoints.isEmpty()) {
+            Untangler.addOnLinePoints(sequence, onLinePoints, solutionSegments, lead);
+            Segment candidateSegment = new Segment(sequence.getLast(), lastTown.getOriginal(), false);
+            solutionSegments.add(candidateSegment);
         }
+        if (sequence.isEmpty() || !sequence.contains(start.getOriginal())) return;
         explodeClusters(sequence, clusters);
         assignLengthToSolution(verbose, kTspSolutions, sequence);
     }
@@ -397,9 +423,14 @@ public class KPathFindingPhase {
     }
 
     private void fixFinalSegment(ArrayList<Point> sequence) {
+        if (!sequence.getFirst().equals(start.getOriginal())) {
+            int startIndex = sequence.indexOf(start.getOriginal());
+            sequence.remove(sequence.get(startIndex));
+            sequence.addFirst(start.getOriginal());
+        }
         if (!sequence.getLast().equals(end.getOriginal())) {
             int endIndex = sequence.indexOf(end.getOriginal());
-            sequence.remove(endIndex);
+            sequence.remove(sequence.get(endIndex));
             sequence.add(end.getOriginal());
         }
     }

@@ -13,17 +13,16 @@ import java.util.List;
 import static java.util.Objects.isNull;
 
 public class Korula {
-    private static final double TIME_LIMIT = Double.MAX_VALUE;
     private static final Logger LOGGER = LogManager.getLogger();
 
     private Korula() {}
 
-    public static Solution calculate(List<Point> points) {
+    public static Solution calculate(List<Point> points, double timeLimit) {
         double bestLength = Double.MAX_VALUE;
         int bestTowns = 0;
         Solution bestSolution = null;
         int i = 1;
-        bestSolution = Gottlieb.calculate(points.getFirst(), points.get(1), points, TIME_LIMIT);
+        bestSolution = Gottlieb.calculate(points.getFirst(), points.get(1), points, timeLimit);
 //        for (Point point : points) {
 //            if (point.getPlurality() == 0) continue;
 //            LOGGER.log(Level.INFO, "KORULA ROUND {}", i);
@@ -31,7 +30,7 @@ public class Korula {
 //            int benchmark = point.getPlurality();
 //            List<Point> filteredPoints = filterPoints(points, pointsCopy, benchmark);
 //            updateWeights(points, filteredPoints, benchmark);
-//            Solution finalSolution = Gottlieb.calculate(filteredPoints.getFirst(), filteredPoints.get(1), filteredPoints, TIME_LIMIT);
+//            Solution finalSolution = Gottlieb.calculate(filteredPoints.getFirst(), filteredPoints.get(1), filteredPoints, timeLimit);
 //            if (!isNull(finalSolution)) {
 //                if (finalSolution.getSequence().size() > bestTowns) {
 //                    bestSolution = finalSolution;
